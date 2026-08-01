@@ -3,10 +3,13 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import type { UnlistenFn } from "@tauri-apps/api/event";
+import { watch } from "vue";
 import { terminalRepository } from "@/repositories/terminalRepository";
+import { useSettingsStore } from "@/stores/settings";
 import "@xterm/xterm/css/xterm.css";
 
 const props = defineProps<{ args: string[] }>();
+const settings = useSettingsStore();
 
 const container = ref<HTMLDivElement | null>(null);
 const sessionId = crypto.randomUUID();
@@ -28,8 +31,8 @@ onMounted(async () => {
   if (!container.value) return;
 
   term = new Terminal({
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
-    fontSize: 13,
+    fontFamily: settings.terminalFontFamily,
+    fontSize: settings.terminalFontSize,
     cursorBlink: true,
     scrollback: 5000,
     theme: {
@@ -71,6 +74,18 @@ onMounted(async () => {
     terminalRepository.resize(sessionId, term.cols, term.rows);
   });
   resizeObserver.observe(container.value);
+
+  // Applique en direct les changements de police/taille depuis les Paramètres.
+  watch(
+    () => [settings.terminalFontSize, settings.terminalFontFamily] as const,
+    ([size, family]) => {
+      if (!term || !fit) return;
+      term.options.fontSize = size;
+      term.options.fontFamily = family;
+      fit.fit();
+      terminalRepository.resize(sessionId, term.cols, term.rows);
+    },
+  );
 });
 
 onBeforeUnmount(async () => {

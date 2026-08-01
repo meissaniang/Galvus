@@ -9,10 +9,25 @@ pub mod services;
 pub mod ssh;
 
 use tauri::Manager;
+use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        // Logs : niveaux + rotation (fichier 5 Mo max) + sortie standard.
+        .plugin(
+            tauri_plugin_log::Builder::new()
+                .level(log::LevelFilter::Info)
+                .max_file_size(5_000_000)
+                .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepAll)
+                .targets([
+                    Target::new(TargetKind::Stdout),
+                    Target::new(TargetKind::LogDir {
+                        file_name: Some("galvus".into()),
+                    }),
+                ])
+                .build(),
+        )
         .plugin(tauri_plugin_opener::init())
         .manage(services::terminal::TerminalManager::default())
         .setup(|app| {
@@ -23,6 +38,7 @@ pub fn run() {
             let database =
                 database::Database::initialize(&data_dir.join("galvus.db"), &key)?;
             app.manage(database);
+            log::info!("Galvus démarré, base initialisée dans {data_dir:?}");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

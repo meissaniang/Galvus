@@ -120,6 +120,7 @@ impl TerminalManager {
             writer,
             child,
         };
+        log::info!("session terminal ouverte: {session_id}");
         self.sessions
             .lock()
             .expect("sessions mutex poisoned")
@@ -165,6 +166,7 @@ impl TerminalManager {
         let mut sessions = self.sessions.lock().expect("sessions mutex poisoned");
         if let Some(mut session) = sessions.remove(session_id) {
             let _ = session.child.kill();
+            log::info!("session terminal fermée: {session_id}");
         }
         Ok(())
     }
