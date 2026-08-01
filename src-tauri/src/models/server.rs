@@ -17,6 +17,8 @@ pub struct Server {
     pub identity_file: Option<String>,
     pub color: Option<String>,
     pub favorite: bool,
+    pub tags: Vec<String>,
+    pub group: Option<String>,
 }
 
 /// Données de création/édition d'un serveur (sans identifiant).
@@ -30,4 +32,7 @@ pub struct ServerInput {
     pub identity_file: Option<String>,
     pub color: Option<String>,
     pub favorite: bool,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    pub group: Option<String>,
 }

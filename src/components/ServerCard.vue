@@ -7,6 +7,7 @@ const emit = defineEmits<{
   connect: [server: Server];
   edit: [server: Server];
   remove: [server: Server];
+  toggleFavorite: [server: Server];
 }>();
 
 /** Couleur d'accent : celle choisie, sinon dérivée du nom. */
@@ -38,12 +39,21 @@ const subtitle = computed(() => {
         <span>{{ initials }}</span>
       </div>
       <div class="server-card__body">
-        <h3 class="server-card__title" :title="server.name">
-          <i v-if="server.favorite" class="pi pi-star-fill server-card__star" />
-          {{ server.name }}
-        </h3>
+        <h3 class="server-card__title" :title="server.name">{{ server.name }}</h3>
         <p class="server-card__subtitle" :title="subtitle">{{ subtitle }}</p>
       </div>
+      <button
+        class="server-card__fav"
+        :class="{ 'server-card__fav--on': server.favorite }"
+        :title="server.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+        @click.stop="emit('toggleFavorite', server)"
+      >
+        <i :class="server.favorite ? 'pi pi-star-fill' : 'pi pi-star'" />
+      </button>
+    </div>
+
+    <div v-if="server.tags.length > 0" class="server-card__tags">
+      <span v-for="tag in server.tags" :key="tag" class="server-card__tag">{{ tag }}</span>
     </div>
 
     <div class="server-card__actions">
@@ -115,9 +125,32 @@ const subtitle = computed(() => {
   text-overflow: ellipsis;
 }
 
-.server-card__star {
+.server-card__fav {
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 0.2rem;
+}
+
+.server-card__fav--on {
   color: #f5b301;
-  font-size: 0.8rem;
+}
+
+.server-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.server-card__tag {
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  background: var(--p-content-hover-background);
+  color: var(--p-text-muted-color);
+  font-size: 0.72rem;
 }
 
 .server-card__subtitle {

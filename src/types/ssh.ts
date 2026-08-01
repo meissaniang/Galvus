@@ -23,6 +23,8 @@ export interface Server {
   identityFile: string | null;
   color: string | null;
   favorite: boolean;
+  tags: string[];
+  group: string | null;
 }
 
 /** Données de création/édition d'un serveur (sans identifiant). */
@@ -34,6 +36,8 @@ export interface ServerInput {
   identityFile: string | null;
   color: string | null;
   favorite: boolean;
+  tags: string[];
+  group: string | null;
 }
 
 /** Une clé SSH détectée dans ~/.ssh. */

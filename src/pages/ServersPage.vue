@@ -19,6 +19,8 @@ const { hosts, loading: hostsLoading, error: hostsError } = storeToRefs(hostsSto
 const { servers, error: serversError } = storeToRefs(myServers);
 
 const search = ref("");
+type SortMode = "favorite" | "name" | "recent";
+const sort = ref<SortMode>("favorite");
 
 function match(values: (string | null)[]): boolean {
   const q = search.value.trim().toLowerCase();
@@ -28,19 +30,46 @@ function match(values: (string | null)[]): boolean {
     .some((v) => v.toLowerCase().includes(q));
 }
 
-const filteredServers = computed(() =>
-  servers.value.filter((s) => match([s.name, s.hostname, s.username])),
-);
+const sortedServers = computed<Server[]>(() => {
+  const list = servers.value.filter((s) =>
+    match([s.name, s.hostname, s.username, ...s.tags]),
+  );
+  const sorted = [...list];
+  if (sort.value === "name") {
+    sorted.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (sort.value === "recent") {
+    sorted.sort((a, b) => b.id - a.id);
+  } else {
+    sorted.sort(
+      (a, b) =>
+        Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name),
+    );
+  }
+  return sorted;
+});
+
+/** Groupes ordonnés : [nom de groupe (ou ""), serveurs]. */
+const groupedServers = computed<[string, Server[]][]>(() => {
+  const groups = new Map<string, Server[]>();
+  for (const server of sortedServers.value) {
+    const key = server.group ?? "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(server);
+  }
+  return [...groups.entries()];
+});
+
 const filteredHosts = computed(() =>
   hosts.value.filter((h) => match([h.alias, h.hostname, h.user])),
 );
 
-// --- Connexions (ouvrent un onglet dans l'espace terminal) ---
+const hasAnyServer = computed(() => sortedServers.value.length > 0);
+
+// --- Connexions (ouvrent un onglet) ---
 function connectHost(host: Host): void {
   connections.open(host.alias, [host.alias]);
   router.push({ name: "terminal" });
 }
-
 function connectServer(server: Server): void {
   const args: string[] = [];
   if (server.port !== 22) args.push("-p", String(server.port));
@@ -50,7 +79,7 @@ function connectServer(server: Server): void {
   router.push({ name: "terminal" });
 }
 
-// --- CRUD via dialog ---
+// --- CRUD ---
 const dialogOpen = ref(false);
 const editingServer = ref<Server | null>(null);
 
@@ -75,6 +104,22 @@ async function onRemove(server: Server): Promise<void> {
     await myServers.remove(server.id);
   }
 }
+function toInput(s: Server): ServerInput {
+  return {
+    name: s.name,
+    hostname: s.hostname,
+    port: s.port,
+    username: s.username,
+    identityFile: s.identityFile,
+    color: s.color,
+    favorite: s.favorite,
+    tags: s.tags,
+    group: s.group,
+  };
+}
+async function toggleFavorite(server: Server): Promise<void> {
+  await myServers.update(server.id, { ...toInput(server), favorite: !server.favorite });
+}
 
 onMounted(() => {
   if (hosts.value.length === 0) hostsStore.load();
@@ -90,10 +135,15 @@ onMounted(() => {
         <input
           v-model="search"
           type="text"
-          placeholder="Rechercher un serveur ou un hôte…"
+          placeholder="Rechercher (nom, hôte, tag…)"
           spellcheck="false"
         />
       </div>
+      <select v-model="sort" class="select" title="Trier">
+        <option value="favorite">Favoris d'abord</option>
+        <option value="name">Nom (A→Z)</option>
+        <option value="recent">Récents</option>
+      </select>
       <button class="btn btn--primary" @click="openNew">
         <i class="pi pi-plus" /> Nouveau serveur
       </button>
@@ -103,25 +153,26 @@ onMounted(() => {
       <i class="pi pi-exclamation-triangle" /> {{ serversError }}
     </p>
 
-    <!-- Mes serveurs (base chiffrée) -->
-    <template v-if="filteredServers.length > 0">
+    <!-- Mes serveurs, groupés -->
+    <template v-for="[group, list] in groupedServers" :key="group || '__ungrouped'">
       <header class="page__header">
-        <h2>Mes serveurs</h2>
-        <span class="page__count">{{ filteredServers.length }}</span>
+        <h2>{{ group || "Mes serveurs" }}</h2>
+        <span class="page__count">{{ list.length }}</span>
       </header>
       <div class="grid">
         <ServerCard
-          v-for="server in filteredServers"
+          v-for="server in list"
           :key="server.id"
           :server="server"
           @connect="connectServer"
           @edit="openEdit"
           @remove="onRemove"
+          @toggle-favorite="toggleFavorite"
         />
       </div>
     </template>
 
-    <!-- Hôtes ~/.ssh/config (lecture seule) -->
+    <!-- Hôtes ~/.ssh/config -->
     <header v-if="filteredHosts.length > 0" class="page__header page__header--spaced">
       <h2>Depuis <code>~/.ssh/config</code></h2>
       <span class="page__count">{{ filteredHosts.length }}</span>
@@ -140,7 +191,7 @@ onMounted(() => {
 
     <!-- Vide -->
     <div
-      v-if="filteredServers.length === 0 && filteredHosts.length === 0 && !hostsLoading"
+      v-if="!hasAnyServer && filteredHosts.length === 0 && !hostsLoading"
       class="state state--empty"
     >
       <i class="pi pi-server" />
@@ -151,7 +202,7 @@ onMounted(() => {
     <p class="page__hint">
       <i class="pi pi-info-circle" /> Serveurs stockés dans une base
       <strong>chiffrée</strong> (clé dans le trousseau). Double-clic ou « Connecter »
-      pour ouvrir une session ; clic sur un hôte du config pour s'y connecter.
+      pour ouvrir une session.
     </p>
 
     <ServerFormDialog
@@ -196,6 +247,16 @@ onMounted(() => {
   outline: none;
 }
 
+.select {
+  padding: 0 0.6rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: 10px;
+  background: var(--p-content-background);
+  color: var(--p-text-color);
+  font: inherit;
+  cursor: pointer;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -223,7 +284,6 @@ onMounted(() => {
 
 .btn--primary:hover {
   filter: brightness(1.05);
-  background: var(--p-primary-color);
 }
 
 .page__header {
@@ -231,6 +291,10 @@ onMounted(() => {
   align-items: center;
   gap: 0.6rem;
   margin-bottom: 1rem;
+}
+
+.page__header:not(:first-of-type) {
+  margin-top: 1.75rem;
 }
 
 .page__header--spaced {

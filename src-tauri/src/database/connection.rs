@@ -35,7 +35,7 @@ impl Database {
         })
     }
 
-    /// Crée le schéma si nécessaire.
+    /// Crée le schéma et applique les migrations additives.
     fn migrate(conn: &Connection) -> Result<(), AppError> {
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS servers (
@@ -50,6 +50,28 @@ impl Database {
                 created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
             );",
         )?;
+
+        // Colonnes ajoutées après coup (bases existantes de l'étape 5).
+        ensure_column(conn, "servers", "tags", "TEXT NOT NULL DEFAULT '[]'")?;
+        ensure_column(conn, "servers", "group_name", "TEXT")?;
         Ok(())
     }
+}
+
+/// Ajoute une colonne si elle n'existe pas déjà (migration idempotente).
+fn ensure_column(
+    conn: &Connection,
+    table: &str,
+    column: &str,
+    declaration: &str,
+) -> Result<(), AppError> {
+    let mut stmt = conn.prepare(&format!("PRAGMA table_info({table})"))?;
+    let exists = stmt
+        .query_map([], |row| row.get::<_, String>(1))?
+        .filter_map(Result::ok)
+        .any(|name| name == column);
+    if !exists {
+        conn.execute_batch(&format!("ALTER TABLE {table} ADD COLUMN {column} {declaration};"))?;
+    }
+    Ok(())
 }

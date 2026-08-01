@@ -14,11 +14,15 @@ function emptyForm(): ServerInput {
     identityFile: null,
     color: null,
     favorite: false,
+    tags: [],
+    group: null,
   };
 }
 
 const form = reactive<ServerInput>(emptyForm());
 const submitted = ref(false);
+/** Saisie brute des tags (séparés par des virgules). */
+const tagsText = ref("");
 
 // (Ré)initialise le formulaire à chaque ouverture.
 watch(
@@ -38,11 +42,21 @@ watch(
             identityFile: source.identityFile,
             color: source.color,
             favorite: source.favorite,
+            tags: [...source.tags],
+            group: source.group,
           }
         : emptyForm(),
     );
+    tagsText.value = source ? source.tags.join(", ") : "";
   },
 );
+
+function parseTags(text: string): string[] {
+  return text
+    .split(",")
+    .map((t) => t.trim())
+    .filter((t) => t.length > 0);
+}
 
 const isValid = () =>
   form.name.trim() !== "" &&
@@ -61,6 +75,8 @@ function submit(): void {
     identityFile: form.identityFile?.trim() || null,
     color: form.color || null,
     favorite: form.favorite,
+    tags: parseTags(tagsText.value),
+    group: form.group?.trim() || null,
   });
 }
 </script>
@@ -101,6 +117,16 @@ function submit(): void {
         <label class="field field--wide">
           <span>Fichier de clé (IdentityFile)</span>
           <input v-model="form.identityFile" type="text" placeholder="~/.ssh/ma-cle" />
+        </label>
+
+        <label class="field">
+          <span>Groupe</span>
+          <input v-model="form.group" type="text" placeholder="Production, Perso…" />
+        </label>
+
+        <label class="field">
+          <span>Tags (séparés par des virgules)</span>
+          <input v-model="tagsText" type="text" placeholder="web, db, staging" />
         </label>
 
         <label class="field field--color">
