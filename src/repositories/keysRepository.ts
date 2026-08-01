@@ -36,6 +36,11 @@ export const keysRepository = {
     return invoke<void>("key_delete", { name });
   },
 
+  /** Contenu de la clé publique (pour copie dans le presse-papiers). */
+  readPublic(name: string): Promise<string> {
+    return invoke<string>("key_read_public", { name });
+  },
+
   /** Ouvre le sélecteur de fichier natif pour choisir une clé privée à importer. */
   async pickKeyFile(): Promise<string | null> {
     const selected = await open({

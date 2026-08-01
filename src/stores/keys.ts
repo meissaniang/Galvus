@@ -60,5 +60,22 @@ export const useKeysStore = defineStore("keys", () => {
     await load();
   }
 
-  return { keys, loading, error, query, filteredKeys, load, generate, importFrom, remove };
+  /** Copie la clé publique dans le presse-papiers. */
+  async function copyPublic(name: string): Promise<void> {
+    const content = await keysRepository.readPublic(name);
+    await navigator.clipboard.writeText(content);
+  }
+
+  return {
+    keys,
+    loading,
+    error,
+    query,
+    filteredKeys,
+    load,
+    generate,
+    importFrom,
+    remove,
+    copyPublic,
+  };
 });

@@ -76,6 +76,23 @@
   --g-sh3: 0 24px 60px rgba(0, 0, 0, 0.6);
 }
 
+/* ---------- Accent Option B — cyan électrique (DS §01) ---------- */
+.accent-cyan {
+  --g-accent: #0c8fae;
+  --g-accent-h: #0a7b96;
+  --g-accent-fg: #ffffff;
+  --g-accent-soft: rgba(12, 143, 174, 0.12);
+  --g-accent-ring: rgba(12, 143, 174, 0.3);
+}
+
+.app-dark.accent-cyan {
+  --g-accent: #1fc7e8;
+  --g-accent-h: #43d6f2;
+  --g-accent-fg: #04222a;
+  --g-accent-soft: rgba(31, 199, 232, 0.14);
+  --g-accent-ring: rgba(31, 199, 232, 0.38);
+}
+
 /* ---------- Mapping vers PrimeVue (--p-*) ---------- */
 /* !important pour l'emporter sur le preset Aura injecté au runtime. */
 :root,

@@ -1,191 +1,291 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { SshKey } from "@/types/ssh";
 
+/**
+ * Carte de clé SSH — fidèle à « ScreenKeys.dc.html » : pastille 38px
+ * (accent-soft pour ED25519), badge de type, encart empreinte SHA256 copiable,
+ * badges privée / publique, warning « algorithme déprécié » pour RSA ≤ 2048.
+ */
 const props = defineProps<{ keyItem: SshKey }>();
-const emit = defineEmits<{ remove: [key: SshKey] }>();
+const emit = defineEmits<{ remove: [key: SshKey]; copyPublic: [key: SshKey] }>();
+
+const isEd25519 = computed(() => props.keyItem.keyType?.toUpperCase() === "ED25519");
+const isDeprecated = computed(
+  () =>
+    props.keyItem.keyType?.toUpperCase() === "RSA" &&
+    (props.keyItem.bits ?? 0) <= 2048,
+);
 
 const typeLabel = computed(() => {
-  const t = props.keyItem.keyType ?? "?";
-  return props.keyItem.bits ? `${t} · ${props.keyItem.bits}` : t;
+  const t = props.keyItem.keyType?.toUpperCase() ?? "?";
+  return t === "RSA" ? `RSA ${props.keyItem.bits ?? ""}`.trim() : t;
 });
 
-/** Empreinte raccourcie pour l'affichage. */
-const shortFingerprint = computed(() => {
-  const fp = props.keyItem.fingerprint;
-  if (!fp) return "—";
-  return fp.length > 24 ? `${fp.slice(0, 24)}…` : fp;
-});
+const copied = ref(false);
+
+async function copyFingerprint(): Promise<void> {
+  if (!props.keyItem.fingerprint) return;
+  await navigator.clipboard.writeText(props.keyItem.fingerprint);
+  copied.value = true;
+  setTimeout(() => (copied.value = false), 1500);
+}
 </script>
 
 <template>
-  <article class="key-card">
-    <div class="key-card__icon">
-      <i class="pi pi-key" />
+  <article class="kcard">
+    <div class="kcard__head">
+      <div class="kcard__ava" :class="{ 'kcard__ava--accent': isEd25519 }">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+          <circle cx="6.2" cy="6.2" r="3.4" stroke="currentColor" stroke-width="1.6" />
+          <path d="M8.7 8.7L14.5 14.5M12 13l1.6-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+      </div>
+      <div class="kcard__titles">
+        <div class="kcard__name-row">
+          <span class="kcard__name">{{ keyItem.name }}</span>
+          <span
+            class="kcard__type"
+            :class="isDeprecated ? 'kcard__type--warn' : 'kcard__type--accent'"
+          >{{ typeLabel }}</span>
+        </div>
+        <div v-if="isDeprecated" class="kcard__sub kcard__sub--warn">
+          Algorithme déprécié — envisagez une rotation
+        </div>
+        <div v-else class="kcard__sub">{{ keyItem.comment || keyItem.path }}</div>
+      </div>
+      <div class="kcard__actions">
+        <button class="kcard__icon" title="Copier la clé publique" @click="emit('copyPublic', keyItem)">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <rect x="2.4" y="2.4" width="6.4" height="6.4" rx="1.6" stroke="currentColor" stroke-width="1.3" />
+            <path d="M5.2 11.6h6.4V5.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          </svg>
+        </button>
+        <button class="kcard__icon kcard__icon--danger" title="Supprimer" @click="emit('remove', keyItem)">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          </svg>
+        </button>
+      </div>
     </div>
-    <button class="key-card__delete" title="Supprimer" @click="emit('remove', keyItem)">
-      <i class="pi pi-trash" />
+
+    <button class="kcard__fp" :title="keyItem.fingerprint ?? ''" @click="copyFingerprint">
+      <span class="kcard__fp-text">{{ keyItem.fingerprint ?? "—" }}</span>
+      <span class="kcard__fp-copy" :class="{ 'kcard__fp-copy--ok': copied }">
+        {{ copied ? "copié ✓" : "copier" }}
+      </span>
     </button>
-    <div class="key-card__body">
-      <div class="key-card__head">
-        <h3 class="key-card__title" :title="keyItem.name">{{ keyItem.name }}</h3>
-        <span class="key-card__type">{{ typeLabel }}</span>
-      </div>
-      <p class="key-card__fingerprint" :title="keyItem.fingerprint ?? ''">
-        {{ shortFingerprint }}
-      </p>
-      <div class="key-card__meta">
-        <span
-          class="key-card__badge"
-          :class="keyItem.hasPrivate ? 'key-card__badge--ok' : 'key-card__badge--warn'"
-        >
-          <i :class="keyItem.hasPrivate ? 'pi pi-lock' : 'pi pi-lock-open'" />
-          {{ keyItem.hasPrivate ? "privée + publique" : "publique seule" }}
-        </span>
-        <span v-if="keyItem.comment" class="key-card__comment" :title="keyItem.comment">
-          {{ keyItem.comment }}
-        </span>
-      </div>
+
+    <div class="kcard__badges">
+      <span v-if="keyItem.hasPrivate" class="kbadge kbadge--ok">
+        <span class="kbadge__dot" />privée
+      </span>
+      <span v-else class="kbadge kbadge--missing">privée manquante</span>
+      <span class="kbadge kbadge--info"><span class="kbadge__dot" />publique</span>
     </div>
   </article>
 </template>
 
 <style scoped>
-.key-card {
+.kcard {
+  background: var(--g-s1);
+  border: 1px solid var(--g-border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  box-shadow: var(--g-sh1);
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.kcard:hover {
+  border-color: var(--g-accent-ring);
+  box-shadow: var(--g-sh2);
+}
+
+.kcard__head {
   display: flex;
   align-items: flex-start;
-  gap: 0.85rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--p-content-border-color);
-  border-radius: 12px;
-  background: var(--p-content-background);
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+  gap: 11px;
 }
 
-.key-card {
-  position: relative;
-}
-
-.key-card:hover {
-  border-color: var(--p-primary-color);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
-}
-
-.key-card__delete {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--p-text-muted-color);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-
-.key-card:hover .key-card__delete {
-  opacity: 1;
-}
-
-.key-card__delete:hover {
-  background: color-mix(in srgb, #ef4444 18%, transparent);
-  color: #ef4444;
-}
-
-.key-card__icon {
+.kcard__ava {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
+  color: var(--g-t2);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
   flex-shrink: 0;
-  border-radius: 10px;
-  background: var(--p-content-hover-background);
-  color: var(--p-primary-color);
-  font-size: 1.2rem;
 }
 
-.key-card__body {
-  min-width: 0;
+.kcard__ava--accent {
+  background: var(--g-accent-soft);
+  border-color: transparent;
+  color: var(--g-accent);
+}
+
+.kcard__titles {
   flex: 1;
+  min-width: 0;
 }
 
-.key-card__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.key-card__title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.key-card__type {
-  flex-shrink: 0;
-  padding: 0.1rem 0.45rem;
-  border-radius: 6px;
-  background: var(--p-highlight-background);
-  color: var(--p-highlight-color);
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.key-card__fingerprint {
-  margin: 0.3rem 0 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.78rem;
-  color: var(--p-text-muted-color);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.key-card__meta {
+.kcard__name-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.55rem;
+  gap: 7px;
   flex-wrap: wrap;
 }
 
-.key-card__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.1rem 0.45rem;
-  border-radius: 6px;
-  font-size: 0.72rem;
+.kcard__name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--g-t1);
 }
 
-.key-card__badge--ok {
-  background: color-mix(in srgb, var(--p-primary-color) 18%, transparent);
-  color: var(--p-primary-color);
+.kcard__type {
+  font-family: var(--g-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 5px;
 }
 
-.key-card__badge--warn {
-  background: var(--p-content-hover-background);
-  color: var(--p-text-muted-color);
+.kcard__type--accent {
+  color: var(--g-accent);
+  background: var(--g-accent-soft);
 }
 
-.key-card__comment {
-  font-size: 0.75rem;
-  color: var(--p-text-muted-color);
-  white-space: nowrap;
+.kcard__type--warn {
+  color: var(--g-warning);
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
+}
+
+.kcard__sub {
+  font-size: 11.5px;
+  color: var(--g-t3);
+  margin-top: 3px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kcard__sub--warn {
+  color: var(--g-warning);
+}
+
+.kcard__actions {
+  display: flex;
+  gap: 5px;
+}
+
+.kcard__icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--g-t2);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.kcard__icon:hover {
+  color: var(--g-t1);
+  background: var(--g-s3);
+}
+
+.kcard__icon--danger:hover {
+  background: var(--g-danger-soft);
+  border-color: var(--g-danger);
+  color: var(--g-danger);
+}
+
+.kcard__fp {
+  background: var(--g-s0);
+  border: 1px solid var(--g-border);
+  border-radius: 9px;
+  padding: 9px 11px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.12s ease;
+}
+
+.kcard__fp:hover {
+  border-color: var(--g-border-2);
+}
+
+.kcard__fp-text {
+  font-family: var(--g-font-mono);
+  font-size: 11px;
+  color: var(--g-t2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.kcard__fp-copy {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--g-t3);
+  flex-shrink: 0;
+}
+
+.kcard__fp-copy--ok {
+  color: var(--g-success);
+}
+
+.kcard__badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kbadge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.kbadge__dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.kbadge--ok {
+  color: var(--g-success);
+  background: var(--g-accent-soft);
+}
+
+.kbadge--info {
+  color: var(--g-info);
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
+}
+
+.kbadge--missing {
+  color: var(--g-t3);
+  background: var(--g-s2);
+  border: 1px dashed var(--g-border-2);
 }
 </style>

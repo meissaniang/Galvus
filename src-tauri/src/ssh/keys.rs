@@ -125,6 +125,14 @@ pub fn import_key(source: &str, name: &str) -> Result<SshKey, AppError> {
         .ok_or_else(|| AppError::Command("clé importée mais clé publique illisible".into()))
 }
 
+/// Lit le contenu de la clé publique `<name>.pub` dans `~/.ssh`.
+pub fn read_public_key(name: &str) -> Result<String, AppError> {
+    validate_key_name(name)?;
+    let dir = ssh_dir()?;
+    let path = dir.join(format!("{name}.pub"));
+    Ok(std::fs::read_to_string(path)?.trim().to_string())
+}
+
 /// Supprime une clé (privée + publique) de `~/.ssh`.
 pub fn delete_key(name: &str) -> Result<(), AppError> {
     validate_key_name(name)?;

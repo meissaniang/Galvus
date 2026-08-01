@@ -3,11 +3,18 @@ import { defineStore } from "pinia";
 import { tunnelsRepository } from "@/repositories/tunnelsRepository";
 import type { Tunnel, TunnelInput } from "@/types/ssh";
 
+/** Dernière erreur de démarrage d'un tunnel (affichée en ligne + bannière). */
+export interface TunnelError {
+  id: number;
+  message: string;
+}
+
 export const useTunnelsStore = defineStore("tunnels", () => {
   const tunnels = ref<Tunnel[]>([]);
   const runningIds = ref<number[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const lastError = ref<TunnelError | null>(null);
 
   function isRunning(id: number): boolean {
     return runningIds.value.includes(id);
@@ -46,17 +53,33 @@ export const useTunnelsStore = defineStore("tunnels", () => {
 
   async function start(id: number): Promise<void> {
     error.value = null;
+    lastError.value = null;
     try {
       await tunnelsRepository.start(id);
     } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e);
+      lastError.value = { id, message: e instanceof Error ? e.message : String(e) };
     }
     await refreshRunning();
+    // Un tunnel qui meurt aussitôt (port occupé, auth refusée…) est signalé.
+    setTimeout(async () => {
+      await refreshRunning();
+      if (!runningIds.value.includes(id) && !lastError.value) {
+        lastError.value = {
+          id,
+          message: "le tunnel s'est arrêté immédiatement — port local déjà utilisé ?",
+        };
+      }
+    }, 900);
   }
 
   async function stop(id: number): Promise<void> {
+    if (lastError.value?.id === id) lastError.value = null;
     await tunnelsRepository.stop(id);
     await refreshRunning();
+  }
+
+  function dismissError(): void {
+    lastError.value = null;
   }
 
   return {
@@ -64,6 +87,7 @@ export const useTunnelsStore = defineStore("tunnels", () => {
     runningIds,
     loading,
     error,
+    lastError,
     isRunning,
     load,
     create,
@@ -71,5 +95,6 @@ export const useTunnelsStore = defineStore("tunnels", () => {
     start,
     stop,
     refreshRunning,
+    dismissError,
   };
 });

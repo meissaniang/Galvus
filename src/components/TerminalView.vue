@@ -33,7 +33,8 @@ onMounted(async () => {
   term = new Terminal({
     fontFamily: settings.terminalFontFamily,
     fontSize: settings.terminalFontSize,
-    cursorBlink: true,
+    lineHeight: settings.terminalLineHeight,
+    cursorBlink: settings.terminalCursorBlink,
     scrollback: 5000,
     theme: {
       background: "#0b1017",
@@ -76,13 +77,21 @@ onMounted(async () => {
   });
   resizeObserver.observe(container.value);
 
-  // Applique en direct les changements de police/taille depuis les Paramètres.
+  // Applique en direct les réglages du terminal depuis les Paramètres.
   watch(
-    () => [settings.terminalFontSize, settings.terminalFontFamily] as const,
-    ([size, family]) => {
+    () =>
+      [
+        settings.terminalFontSize,
+        settings.terminalFontFamily,
+        settings.terminalLineHeight,
+        settings.terminalCursorBlink,
+      ] as const,
+    ([size, family, lineHeight, blink]) => {
       if (!term || !fit) return;
       term.options.fontSize = size;
       term.options.fontFamily = family;
+      term.options.lineHeight = lineHeight;
+      term.options.cursorBlink = blink;
       fit.fit();
       terminalRepository.resize(sessionId, term.cols, term.rows);
     },

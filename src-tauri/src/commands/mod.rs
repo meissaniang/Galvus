@@ -41,6 +41,12 @@ pub fn key_delete(name: String) -> Result<(), AppError> {
     crate::ssh::keys::delete_key(&name)
 }
 
+/// Lit le contenu de la clé publique (pour copie dans le presse-papiers).
+#[tauri::command]
+pub fn key_read_public(name: String) -> Result<String, AppError> {
+    crate::ssh::keys::read_public_key(&name)
+}
+
 /// Liste les serveurs enregistrés par l'utilisateur.
 #[tauri::command]
 pub fn server_list(db: tauri::State<'_, Database>) -> Result<Vec<Server>, AppError> {

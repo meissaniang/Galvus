@@ -53,6 +53,7 @@ pub fn run() {
             commands::key_generate,
             commands::key_import,
             commands::key_delete,
+            commands::key_read_public,
             commands::server_list,
             commands::server_create,
             commands::server_update,
