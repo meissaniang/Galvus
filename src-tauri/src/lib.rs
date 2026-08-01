@@ -12,9 +12,14 @@ pub mod ssh;
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(services::terminal::TerminalManager::default())
         .invoke_handler(tauri::generate_handler![
             commands::list_hosts,
-            commands::list_keys
+            commands::list_keys,
+            commands::terminal_open,
+            commands::terminal_write,
+            commands::terminal_resize,
+            commands::terminal_close
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

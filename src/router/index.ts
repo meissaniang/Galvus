@@ -27,6 +27,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/pages/SettingsPage.vue"),
     meta: { title: "Paramètres", icon: "pi pi-cog" },
   },
+  {
+    // Session terminal ; pas de meta.title => absente de la navigation latérale.
+    path: "/terminal/:alias",
+    name: "terminal",
+    component: () => import("@/pages/TerminalPage.vue"),
+  },
 ];
 
 export const router = createRouter({

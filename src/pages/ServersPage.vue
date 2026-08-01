@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
 import { storeToRefs } from "pinia";
+import { useRouter } from "vue-router";
 import { useServersStore } from "@/stores/servers";
 import HostCard from "@/components/HostCard.vue";
+import type { Host } from "@/types/ssh";
 
 const store = useServersStore();
 const { filteredHosts, hosts, loading, error, query } = storeToRefs(store);
+const router = useRouter();
+
+function connect(host: Host): void {
+  router.push({ name: "terminal", params: { alias: host.alias } });
+}
 
 onMounted(() => {
   if (hosts.value.length === 0) {
@@ -51,12 +58,17 @@ onMounted(() => {
     </div>
 
     <div v-else class="grid">
-      <HostCard v-for="host in filteredHosts" :key="host.alias" :host="host" />
+      <HostCard
+        v-for="host in filteredHosts"
+        :key="host.alias"
+        :host="host"
+        @click="connect(host)"
+      />
     </div>
 
     <p class="page__hint">
-      <i class="pi pi-info-circle" /> Données réelles lues via <code>ssh -G</code>. La
-      connexion terminal arrive à l'étape suivante du Livrable 1.
+      <i class="pi pi-info-circle" /> Clique sur un hôte pour ouvrir une session SSH.
+      Connexion via le binaire <code>ssh</code> système.
     </p>
   </section>
 </template>
