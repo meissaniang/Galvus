@@ -1,9 +1,10 @@
 //! Commandes Tauri exposées au frontend (#[tauri::command]). Couche mince : délègue aux services.
 
-use crate::database::{servers_repository, Database};
+use crate::database::{servers_repository, tunnels_repository, Database};
 use crate::errors::AppError;
-use crate::models::{Host, Server, ServerInput, SshKey};
+use crate::models::{Host, Server, ServerInput, SshKey, Tunnel, TunnelInput};
 use crate::services::terminal::TerminalManager;
+use crate::services::tunnels::TunnelManager;
 
 /// Liste les hôtes du `~/.ssh/config` (résolus via `ssh -G`).
 #[tauri::command]
@@ -50,6 +51,61 @@ pub fn server_update(
 pub fn server_delete(db: tauri::State<'_, Database>, id: i64) -> Result<(), AppError> {
     let conn = db.conn.lock().expect("db mutex poisoned");
     servers_repository::delete(&conn, id)
+}
+
+/// Liste les tunnels enregistrés.
+#[tauri::command]
+pub fn tunnel_list(db: tauri::State<'_, Database>) -> Result<Vec<Tunnel>, AppError> {
+    let conn = db.conn.lock().expect("db mutex poisoned");
+    tunnels_repository::list(&conn)
+}
+
+/// Crée un tunnel.
+#[tauri::command]
+pub fn tunnel_create(
+    db: tauri::State<'_, Database>,
+    input: TunnelInput,
+) -> Result<Tunnel, AppError> {
+    let conn = db.conn.lock().expect("db mutex poisoned");
+    tunnels_repository::create(&conn, &input)
+}
+
+/// Supprime un tunnel (l'arrête d'abord s'il tourne).
+#[tauri::command]
+pub fn tunnel_delete(
+    db: tauri::State<'_, Database>,
+    manager: tauri::State<'_, TunnelManager>,
+    id: i64,
+) -> Result<(), AppError> {
+    manager.stop(id)?;
+    let conn = db.conn.lock().expect("db mutex poisoned");
+    tunnels_repository::delete(&conn, id)
+}
+
+/// Démarre un tunnel.
+#[tauri::command]
+pub fn tunnel_start(
+    db: tauri::State<'_, Database>,
+    manager: tauri::State<'_, TunnelManager>,
+    id: i64,
+) -> Result<(), AppError> {
+    let tunnel = {
+        let conn = db.conn.lock().expect("db mutex poisoned");
+        tunnels_repository::get(&conn, id)?
+    };
+    manager.start(&tunnel)
+}
+
+/// Arrête un tunnel.
+#[tauri::command]
+pub fn tunnel_stop(manager: tauri::State<'_, TunnelManager>, id: i64) -> Result<(), AppError> {
+    manager.stop(id)
+}
+
+/// Identifiants des tunnels actuellement actifs.
+#[tauri::command]
+pub fn tunnel_running(manager: tauri::State<'_, TunnelManager>) -> Result<Vec<i64>, AppError> {
+    Ok(manager.running_ids())
 }
 
 /// Ouvre une session terminal SSH interactive (binaire `ssh` système dans un PTY).

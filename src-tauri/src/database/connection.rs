@@ -54,6 +54,19 @@ impl Database {
         // Colonnes ajoutées après coup (bases existantes de l'étape 5).
         ensure_column(conn, "servers", "tags", "TEXT NOT NULL DEFAULT '[]'")?;
         ensure_column(conn, "servers", "group_name", "TEXT")?;
+
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS tunnels (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                name        TEXT    NOT NULL,
+                kind        TEXT    NOT NULL,
+                ssh_target  TEXT    NOT NULL,
+                listen_port INTEGER NOT NULL,
+                target_host TEXT,
+                target_port INTEGER,
+                created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+            );",
+        )?;
         Ok(())
     }
 }

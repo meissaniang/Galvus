@@ -22,6 +22,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "Clés SSH", icon: "pi pi-key" },
   },
   {
+    path: "/tunnels",
+    name: "tunnels",
+    component: () => import("@/pages/TunnelsPage.vue"),
+    meta: { title: "Tunnels", icon: "pi pi-arrow-right-arrow-left" },
+  },
+  {
     path: "/settings",
     name: "settings",
     component: () => import("@/pages/SettingsPage.vue"),

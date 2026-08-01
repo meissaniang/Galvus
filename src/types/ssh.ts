@@ -40,6 +40,30 @@ export interface ServerInput {
   group: string | null;
 }
 
+/** Type de tunnel SSH. */
+export type TunnelKind = "local" | "remote" | "dynamic";
+
+/** Un tunnel SSH (redirection de port). */
+export interface Tunnel {
+  id: number;
+  name: string;
+  kind: TunnelKind;
+  sshTarget: string;
+  listenPort: number;
+  targetHost: string | null;
+  targetPort: number | null;
+}
+
+/** Données de création d'un tunnel (sans identifiant). */
+export interface TunnelInput {
+  name: string;
+  kind: TunnelKind;
+  sshTarget: string;
+  listenPort: number;
+  targetHost: string | null;
+  targetPort: number | null;
+}
+
 /** Une clé SSH détectée dans ~/.ssh. */
 export interface SshKey {
   name: string;

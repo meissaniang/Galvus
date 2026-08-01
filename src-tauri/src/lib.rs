@@ -30,6 +30,7 @@ pub fn run() {
         )
         .plugin(tauri_plugin_opener::init())
         .manage(services::terminal::TerminalManager::default())
+        .manage(services::tunnels::TunnelManager::default())
         .setup(|app| {
             // Coffre natif -> clé de chiffrement -> ouverture de la base chiffrée.
             let key = security::vault::get_or_create_db_key()?;
@@ -48,6 +49,12 @@ pub fn run() {
             commands::server_create,
             commands::server_update,
             commands::server_delete,
+            commands::tunnel_list,
+            commands::tunnel_create,
+            commands::tunnel_delete,
+            commands::tunnel_start,
+            commands::tunnel_stop,
+            commands::tunnel_running,
             commands::terminal_open,
             commands::terminal_write,
             commands::terminal_resize,

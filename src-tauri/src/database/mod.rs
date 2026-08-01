@@ -2,5 +2,6 @@
 
 mod connection;
 pub mod servers_repository;
+pub mod tunnels_repository;
 
 pub use connection::Database;
