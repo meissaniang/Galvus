@@ -3,15 +3,24 @@ import { defineStore } from "pinia";
 
 const STORAGE_KEY = "galvus.settings.v1";
 
+/** Mode d'affichage de la liste des serveurs. */
+export type ServersView = "grid" | "list";
+/** Critère de tri des serveurs. */
+export type ServersSort = "name" | "favorite" | "recent";
+
 interface PersistedSettings {
   terminalFontSize: number;
   terminalFontFamily: string;
+  serversView: ServersView;
+  serversSort: ServersSort;
 }
 
 const DEFAULTS: PersistedSettings = {
   terminalFontSize: 13,
   terminalFontFamily:
     '"JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace',
+  serversView: "grid",
+  serversSort: "name",
 };
 
 function read(): PersistedSettings {
@@ -29,13 +38,17 @@ export const useSettingsStore = defineStore("settings", () => {
   const initial = read();
   const terminalFontSize = ref(initial.terminalFontSize);
   const terminalFontFamily = ref(initial.terminalFontFamily);
+  const serversView = ref<ServersView>(initial.serversView);
+  const serversSort = ref<ServersSort>(initial.serversSort);
 
-  watch([terminalFontSize, terminalFontFamily], () => {
+  watch([terminalFontSize, terminalFontFamily, serversView, serversSort], () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
         terminalFontSize: terminalFontSize.value,
         terminalFontFamily: terminalFontFamily.value,
+        serversView: serversView.value,
+        serversSort: serversSort.value,
       }),
     );
   });
@@ -45,5 +58,5 @@ export const useSettingsStore = defineStore("settings", () => {
     terminalFontFamily.value = DEFAULTS.terminalFontFamily;
   }
 
-  return { terminalFontSize, terminalFontFamily, reset };
+  return { terminalFontSize, terminalFontFamily, serversView, serversSort, reset };
 });

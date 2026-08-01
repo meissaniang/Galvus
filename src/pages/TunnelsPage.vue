@@ -107,6 +107,12 @@ onMounted(() => store.load());
 </template>
 
 <style scoped>
+.page {
+  height: 100%;
+  overflow-y: auto;
+  padding: 18px 20px 24px;
+  box-sizing: border-box;
+}
 .page__header h1 {
   display: flex;
   align-items: center;

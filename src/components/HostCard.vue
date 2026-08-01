@@ -2,126 +2,114 @@
 import { computed } from "vue";
 import type { Host } from "@/types/ssh";
 
-const props = defineProps<{ host: Host }>();
+/**
+ * Carte d'hôte importé de ~/.ssh/config — fidèle au DS : bordure pointillée,
+ * pastille mono 32px sur surface-2, adresse mono. Lecture seule, clic = connexion.
+ */
+const props = defineProps<{ host: Host; connected?: boolean }>();
 
-/** Couleur d'accent stable dérivée de l'alias (teinte HSL déterministe). */
-const accent = computed(() => {
-  let hue = 0;
-  for (const ch of props.host.alias) {
-    hue = (hue * 31 + ch.charCodeAt(0)) % 360;
-  }
-  return `hsl(${hue} 65% 48%)`;
-});
-
-const initials = computed(() =>
-  props.host.alias.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase(),
+const abbr = computed(() =>
+  props.host.alias.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toLowerCase(),
 );
 
-const subtitle = computed(() => {
-  const parts: string[] = [];
-  if (props.host.user) parts.push(props.host.user);
-  if (props.host.hostname) parts.push(props.host.hostname);
-  return parts.length ? parts.join("@") : "ssh";
+const address = computed(() => {
+  const target = props.host.user
+    ? `${props.host.user}@${props.host.hostname ?? props.host.alias}`
+    : (props.host.hostname ?? props.host.alias);
+  return `${target}:${props.host.port ?? 22}`;
 });
 </script>
 
 <template>
-  <article class="host-card">
-    <div class="host-card__icon" :style="{ background: accent }">
-      <span>{{ initials }}</span>
-    </div>
-    <div class="host-card__body">
-      <h3 class="host-card__title" :title="host.alias">{{ host.alias }}</h3>
-      <p class="host-card__subtitle" :title="subtitle">{{ subtitle }}</p>
-      <div class="host-card__meta">
-        <span v-if="host.port && host.port !== 22" class="host-card__badge">
-          <i class="pi pi-sign-in" /> {{ host.port }}
-        </span>
-        <span v-if="host.proxyJump" class="host-card__badge" :title="host.proxyJump">
-          <i class="pi pi-share-alt" /> jump
-        </span>
-        <span v-if="host.identityFile" class="host-card__badge" title="Clé dédiée">
-          <i class="pi pi-key" />
-        </span>
+  <article class="hostcard" :title="`ssh ${host.alias}`">
+    <div class="hostcard__ava">{{ abbr }}</div>
+    <div class="hostcard__body">
+      <div class="hostcard__head">
+        <span class="hostcard__name">{{ host.alias }}</span>
+        <span v-if="connected" class="hostcard__on" title="Session ouverte" />
+        <span v-if="host.proxyJump" class="hostcard__jump" :title="`ProxyJump ${host.proxyJump}`">jump</span>
       </div>
+      <div class="hostcard__addr">{{ address }}</div>
     </div>
   </article>
 </template>
 
 <style scoped>
-.host-card {
+.hostcard {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--p-content-border-color);
+  gap: 11px;
+  padding: 11px 13px;
+  background: transparent;
+  border: 1px dashed var(--g-border);
   border-radius: 12px;
-  background: var(--p-content-background);
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: border-color 0.14s ease, background 0.14s ease;
 }
 
-.host-card:hover {
-  border-color: var(--p-primary-color);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
+.hostcard:hover {
+  border-color: var(--g-accent-ring);
+  background: var(--g-s1);
 }
 
-.host-card__icon {
+.hostcard__ava {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
-  border-radius: 10px;
-  color: #fff;
+  font-family: var(--g-font-mono);
+  font-size: 11px;
   font-weight: 700;
-  font-size: 0.95rem;
-  letter-spacing: 0.02em;
+  color: var(--g-t2);
+  flex-shrink: 0;
 }
 
-.host-card__body {
+.hostcard__body {
   min-width: 0;
-  flex: 1;
 }
 
-.host-card__title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.host-card__subtitle {
-  margin: 0.15rem 0 0;
-  font-size: 0.85rem;
-  color: var(--p-text-muted-color);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.host-card__meta {
+.hostcard__head {
   display: flex;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
-.host-card__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.1rem 0.45rem;
-  border-radius: 6px;
-  background: var(--p-content-hover-background);
-  color: var(--p-text-muted-color);
-  font-size: 0.72rem;
+.hostcard__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--g-t1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hostcard__on {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--g-success);
+  flex-shrink: 0;
+}
+
+.hostcard__jump {
+  font-family: var(--g-font-mono);
+  font-size: 9.5px;
+  color: var(--g-t3);
+  border: 1px solid var(--g-border);
+  padding: 0 5px;
+  border-radius: 5px;
+}
+
+.hostcard__addr {
+  font-family: var(--g-font-mono);
+  font-size: 11px;
+  color: var(--g-t3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

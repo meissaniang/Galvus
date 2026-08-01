@@ -85,6 +85,8 @@ const router = useRouter();
   flex-direction: column;
   height: 100%;
   gap: 0.6rem;
+  padding: 12px 16px 16px;
+  box-sizing: border-box;
 }
 
 .bar {

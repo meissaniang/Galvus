@@ -162,6 +162,13 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.page {
+  height: 100%;
+  overflow-y: auto;
+  padding: 18px 20px 24px;
+  box-sizing: border-box;
+}
+
 .toolbar {
   display: flex;
   gap: 0.6rem;

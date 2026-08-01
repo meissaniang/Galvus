@@ -1,9 +1,31 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from "vue";
 import type { Server, ServerInput } from "@/types/ssh";
+import { pickFile } from "@/services/filePicker";
 
-const props = defineProps<{ open: boolean; server: Server | null }>();
+/**
+ * Dialog « Nouveau / Éditer serveur » — fidèle à « ScreenServers.dc.html » :
+ * 540px radius 14, grille 2 colonnes, champs surface-2, chips de tags,
+ * swatches de couleur du DS, toggle Favori, note de confidentialité.
+ */
+const props = defineProps<{
+  open: boolean;
+  server: Server | null;
+  groups?: string[];
+  defaultGroup?: string | null;
+}>();
 const emit = defineEmits<{ save: [input: ServerInput]; close: [] }>();
+
+/** Couleurs de pastille du design system. */
+const SWATCHES = [
+  "#4C8DFF",
+  "#A96CF5",
+  "#23C48A",
+  "#F08A3C",
+  "#EC5F9E",
+  "#22B8D9",
+  "#7B8CA6",
+];
 
 function emptyForm(): ServerInput {
   return {
@@ -20,16 +42,16 @@ function emptyForm(): ServerInput {
 }
 
 const form = reactive<ServerInput>(emptyForm());
+const tags = ref<string[]>([]);
+const tagDraft = ref("");
 const submitted = ref(false);
-/** Saisie brute des tags (séparés par des virgules). */
-const tagsText = ref("");
 
-// (Ré)initialise le formulaire à chaque ouverture.
 watch(
   () => props.open,
   (open) => {
     if (!open) return;
     submitted.value = false;
+    tagDraft.value = "";
     const source = props.server;
     Object.assign(
       form,
@@ -45,17 +67,36 @@ watch(
             tags: [...source.tags],
             group: source.group,
           }
-        : emptyForm(),
+        : { ...emptyForm(), group: props.defaultGroup ?? null },
     );
-    tagsText.value = source ? source.tags.join(", ") : "";
+    tags.value = source ? [...source.tags] : [];
   },
 );
 
-function parseTags(text: string): string[] {
-  return text
-    .split(",")
-    .map((t) => t.trim())
-    .filter((t) => t.length > 0);
+function addTag(): void {
+  const value = tagDraft.value.trim().replace(/,$/, "");
+  if (value && !tags.value.includes(value)) {
+    tags.value.push(value);
+  }
+  tagDraft.value = "";
+}
+
+function removeTag(tag: string): void {
+  tags.value = tags.value.filter((t) => t !== tag);
+}
+
+function onTagKeydown(event: KeyboardEvent): void {
+  if (event.key === "Enter" || event.key === ",") {
+    event.preventDefault();
+    addTag();
+  } else if (event.key === "Backspace" && tagDraft.value === "" && tags.value.length) {
+    tags.value.pop();
+  }
+}
+
+async function browseKey(): Promise<void> {
+  const path = await pickFile("Choisir un fichier de clé privée");
+  if (path) form.identityFile = path;
 }
 
 const isValid = () =>
@@ -66,6 +107,7 @@ const isValid = () =>
 
 function submit(): void {
   submitted.value = true;
+  addTag();
   if (!isValid()) return;
   emit("save", {
     name: form.name.trim(),
@@ -75,79 +117,151 @@ function submit(): void {
     identityFile: form.identityFile?.trim() || null,
     color: form.color || null,
     favorite: form.favorite,
-    tags: parseTags(tagsText.value),
+    tags: [...tags.value],
     group: form.group?.trim() || null,
   });
 }
 </script>
 
 <template>
-  <div v-if="open" class="overlay" @click.self="emit('close')">
-    <div class="dialog" role="dialog" aria-modal="true">
-      <header class="dialog__head">
-        <h2>{{ server ? "Éditer le serveur" : "Nouveau serveur" }}</h2>
-        <button class="icon-btn" title="Fermer" @click="emit('close')">
-          <i class="pi pi-times" />
-        </button>
-      </header>
+  <Transition name="dlg">
+    <div v-if="open" class="overlay" @click.self="emit('close')">
+      <div class="dialog" role="dialog" aria-modal="true">
+        <header class="dialog__head">
+          <div class="dialog__badge">
+            <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
+              <rect x="2.5" y="2.8" width="13" height="5" rx="1.8" stroke="currentColor" stroke-width="1.5" />
+              <rect x="2.5" y="10.2" width="13" height="5" rx="1.8" stroke="currentColor" stroke-width="1.5" />
+            </svg>
+          </div>
+          <div class="dialog__titles">
+            <div class="dialog__title">{{ server ? "Éditer le serveur" : "Nouveau serveur" }}</div>
+            <div class="dialog__subtitle">Stocké localement, chiffré au repos</div>
+          </div>
+          <button class="dialog__close" title="Fermer" @click="emit('close')">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+          </button>
+        </header>
 
-      <form class="dialog__body" @submit.prevent="submit">
-        <label class="field field--wide">
-          <span>Nom *</span>
-          <input v-model="form.name" type="text" placeholder="Mon serveur" />
-          <small v-if="submitted && !form.name.trim()" class="err">Requis</small>
-        </label>
+        <form class="dialog__body" @submit.prevent="submit">
+          <div class="field field--wide">
+            <label>Nom</label>
+            <input v-model="form.name" type="text" placeholder="db-replica-02" />
+            <span v-if="submitted && !form.name.trim()" class="field__err">Requis</span>
+          </div>
 
-        <label class="field field--wide">
-          <span>Hôte *</span>
-          <input v-model="form.hostname" type="text" placeholder="192.168.1.10 ou example.com" />
-          <small v-if="submitted && !form.hostname.trim()" class="err">Requis</small>
-        </label>
+          <div class="field">
+            <label>Hôte</label>
+            <input v-model="form.hostname" type="text" class="mono" placeholder="10.4.12.61" />
+            <span v-if="submitted && !form.hostname.trim()" class="field__err">Requis</span>
+          </div>
 
-        <label class="field">
-          <span>Port</span>
-          <input v-model.number="form.port" type="number" min="1" max="65535" />
-        </label>
+          <div class="field">
+            <label>Port</label>
+            <input v-model.number="form.port" type="number" class="mono" min="1" max="65535" />
+          </div>
 
-        <label class="field">
-          <span>Utilisateur</span>
-          <input v-model="form.username" type="text" placeholder="root" />
-        </label>
+          <div class="field">
+            <label>Utilisateur</label>
+            <input v-model="form.username" type="text" class="mono" placeholder="postgres" />
+          </div>
 
-        <label class="field field--wide">
-          <span>Fichier de clé (IdentityFile)</span>
-          <input v-model="form.identityFile" type="text" placeholder="~/.ssh/ma-cle" />
-        </label>
+          <div class="field">
+            <label>Fichier de clé</label>
+            <div class="field__file">
+              <input v-model="form.identityFile" type="text" class="mono" placeholder="~/.ssh/id_ed25519" />
+              <button type="button" class="field__browse" @click="browseKey">Parcourir</button>
+            </div>
+          </div>
 
-        <label class="field">
-          <span>Groupe</span>
-          <input v-model="form.group" type="text" placeholder="Production, Perso…" />
-        </label>
+          <div class="field">
+            <label>Groupe</label>
+            <input v-model="form.group" type="text" list="galvus-groups" placeholder="Production" />
+            <datalist id="galvus-groups">
+              <option v-for="g in groups ?? []" :key="g" :value="g" />
+            </datalist>
+          </div>
 
-        <label class="field">
-          <span>Tags (séparés par des virgules)</span>
-          <input v-model="tagsText" type="text" placeholder="web, db, staging" />
-        </label>
+          <div class="field">
+            <label>Tags</label>
+            <div class="tags">
+              <span v-for="tag in tags" :key="tag" class="tags__chip">
+                {{ tag }}
+                <button type="button" class="tags__x" @click="removeTag(tag)">
+                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
+                    <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                  </svg>
+                </button>
+              </span>
+              <input
+                v-model="tagDraft"
+                type="text"
+                class="tags__input"
+                :placeholder="tags.length === 0 ? 'postgres, replica…' : '+'"
+                @keydown="onTagKeydown"
+                @blur="addTag"
+              />
+            </div>
+          </div>
 
-        <label class="field field--color">
-          <span>Couleur</span>
-          <input v-model="form.color" type="color" />
-        </label>
+          <div class="field--footer">
+            <div class="swatches">
+              <label>Couleur de la pastille</label>
+              <div class="swatches__row">
+                <button
+                  type="button"
+                  class="swatch swatch--auto"
+                  :class="{ 'swatch--on': form.color === null }"
+                  title="Automatique"
+                  @click="form.color = null"
+                >A</button>
+                <button
+                  v-for="c in SWATCHES"
+                  :key="c"
+                  type="button"
+                  class="swatch"
+                  :class="{ 'swatch--on': form.color === c }"
+                  :style="{ background: c, '--sw': c }"
+                  @click="form.color = c"
+                />
+              </div>
+            </div>
+            <label class="fav">
+              <span class="fav__label">Favori</span>
+              <button
+                type="button"
+                class="fav__toggle"
+                :class="{ 'fav__toggle--on': form.favorite }"
+                role="switch"
+                :aria-checked="form.favorite"
+                @click="form.favorite = !form.favorite"
+              >
+                <span class="fav__knob" />
+              </button>
+            </label>
+          </div>
+        </form>
 
-        <label class="field field--check">
-          <input v-model="form.favorite" type="checkbox" />
-          <span>Favori</span>
-        </label>
-      </form>
-
-      <footer class="dialog__foot">
-        <button class="btn" @click="emit('close')">Annuler</button>
-        <button class="btn btn--primary" @click="submit">
-          {{ server ? "Enregistrer" : "Créer" }}
-        </button>
-      </footer>
+        <footer class="dialog__foot">
+          <span class="dialog__privacy">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="7" r="5.4" stroke="currentColor" stroke-width="1.3" />
+              <path d="M7 4.2v.1M7 6.2v3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            </svg>
+            Aucune donnée ne quitte votre machine
+          </span>
+          <div class="dialog__cta">
+            <button type="button" class="btn" @click="emit('close')">Annuler</button>
+            <button type="button" class="btn btn--primary" @click="submit">
+              Enregistrer
+            </button>
+          </div>
+        </footer>
+      </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -159,143 +273,388 @@ function submit(): void {
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgb(0 0 0 / 0.5);
+  background: rgba(6, 10, 15, 0.62);
+  backdrop-filter: blur(3px);
 }
 
 .dialog {
-  width: 100%;
-  max-width: 520px;
-  border: 1px solid var(--p-content-border-color);
+  width: 540px;
+  max-width: 100%;
+  background: var(--g-s1);
+  border: 1px solid var(--g-border);
   border-radius: 14px;
-  background: var(--p-content-background);
-  box-shadow: 0 20px 60px rgb(0 0 0 / 0.35);
+  box-shadow: var(--g-sh3);
+  overflow: hidden;
+}
+
+/* Animations du DS : backdrop 120ms, carte 180ms scale .97 + translateY. */
+.dlg-enter-active {
+  transition: opacity 0.12s ease-out;
+}
+.dlg-enter-active .dialog {
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.18s ease-out;
+}
+.dlg-enter-from {
+  opacity: 0;
+}
+.dlg-enter-from .dialog {
+  transform: scale(0.97) translateY(8px);
+  opacity: 0;
+}
+.dlg-leave-active {
+  transition: opacity 0.12s ease-in;
+}
+.dlg-leave-active .dialog {
+  transition: transform 0.12s ease-in, opacity 0.12s ease-in;
+}
+.dlg-leave-to {
+  opacity: 0;
+}
+.dlg-leave-to .dialog {
+  transform: scale(0.98);
+  opacity: 0;
 }
 
 .dialog__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--p-content-border-color);
+  gap: 10px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--g-border);
 }
 
-.dialog__head h2 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
-.icon-btn {
-  display: inline-flex;
+.dialog__badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--g-accent-soft);
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  color: var(--g-accent);
+}
+
+.dialog__titles {
+  flex: 1;
+}
+
+.dialog__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--g-t1);
+}
+
+.dialog__subtitle {
+  font-size: 12px;
+  color: var(--g-t3);
+  margin-top: 1px;
+}
+
+.dialog__close {
+  width: 28px;
+  height: 28px;
   border: 0;
   border-radius: 8px;
-  background: transparent;
-  color: var(--p-text-muted-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--g-t3);
+  background: var(--g-s2);
   cursor: pointer;
 }
 
-.icon-btn:hover {
-  background: var(--p-content-hover-background);
+.dialog__close:hover {
+  color: var(--g-t1);
+  background: var(--g-s3);
 }
 
 .dialog__body {
+  padding: 16px 18px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.9rem 1rem;
-  padding: 1.25rem;
+  gap: 13px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 6px;
 }
 
 .field--wide {
-  grid-column: 1 / -1;
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.field > span {
-  font-size: 0.82rem;
-  color: var(--p-text-muted-color);
+.field label,
+.field--wide label,
+.swatches label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--g-t2);
 }
 
-.field input[type="text"],
-.field input[type="number"] {
-  padding: 0.55rem 0.7rem;
-  border: 1px solid var(--p-content-border-color);
-  border-radius: 9px;
-  background: var(--p-content-background);
-  color: var(--p-text-color);
-  font: inherit;
-  outline: none;
-}
-
-.field input[type="text"]:focus,
-.field input[type="number"]:focus {
-  border-color: var(--p-primary-color);
-}
-
-.field--color input[type="color"] {
-  width: 48px;
+.field input,
+.field--wide input {
   height: 34px;
-  padding: 0;
-  border: 1px solid var(--p-content-border-color);
-  border-radius: 8px;
-  background: none;
+  border-radius: 9px;
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
+  padding: 0 11px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--g-t1);
+  outline: none;
+  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.field input.mono,
+.field--wide input.mono {
+  font-family: var(--g-font-mono);
+  font-size: 12.5px;
+}
+
+.field input:focus,
+.field--wide input:focus,
+.tags:focus-within {
+  border-color: var(--g-accent);
+  box-shadow: 0 0 0 3px var(--g-accent-ring);
+}
+
+.field input::placeholder {
+  color: var(--g-t3);
+}
+
+.field__err {
+  font-size: 11px;
+  color: var(--g-danger);
+}
+
+.field__file {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field__file input {
+  padding-right: 84px;
+}
+
+.field__browse {
+  position: absolute;
+  right: 4px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 6px;
+  border: 1px solid var(--g-border);
+  background: var(--g-s1);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--g-t2);
   cursor: pointer;
 }
 
-.field--check {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
-  align-self: end;
+.field__browse:hover {
+  color: var(--g-t1);
+  background: var(--g-s2);
 }
 
-.field--check input {
+/* Tags — chips + saisie inline. */
+.tags {
+  min-height: 34px;
+  border-radius: 9px;
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 3px 9px;
+  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+
+.tags__chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--g-t1);
+  background: var(--g-s1);
+  border: 1px solid var(--g-border);
+  padding: 2px 6px 2px 8px;
+  border-radius: 999px;
+}
+
+.tags__x {
+  display: flex;
+  border: 0;
+  background: transparent;
+  color: var(--g-t3);
+  cursor: pointer;
+  padding: 0;
+}
+
+.tags__x:hover {
+  color: var(--g-danger);
+}
+
+.tags__input {
+  flex: 1;
+  min-width: 40px;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--g-t1);
+  outline: none;
+}
+
+.tags__input::placeholder {
+  color: var(--g-t3);
+}
+
+/* Rangée couleur + favori. */
+.field--footer {
+  grid-column: span 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 2px;
+}
+
+.swatches {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.swatches__row {
+  display: flex;
+  gap: 7px;
+}
+
+.swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatch--on {
+  box-shadow: 0 0 0 2px var(--g-s1), 0 0 0 4px var(--sw, var(--g-accent));
+}
+
+.swatch--auto {
+  background: var(--g-s2);
+  border: 1px solid var(--g-border-2);
+  color: var(--g-t2);
+  font-size: 11px;
+  font-weight: 700;
+  --sw: var(--g-border-2);
+}
+
+.fav {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.fav__label {
+  font-size: 12.5px;
+  color: var(--g-t2);
+}
+
+.fav__toggle {
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--g-s3);
+  display: flex;
+  align-items: center;
+  padding: 0 3px;
+  cursor: pointer;
+  transition: background 0.14s ease;
+  box-sizing: border-box;
+}
+
+.fav__toggle--on {
+  background: var(--g-accent);
+  justify-content: flex-end;
+}
+
+.fav__knob {
   width: 16px;
   height: 16px;
-}
-
-.err {
-  color: #ef4444;
-  font-size: 0.75rem;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--g-sh1);
 }
 
 .dialog__foot {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.6rem;
-  padding: 1rem 1.25rem;
-  border-top: 1px solid var(--p-content-border-color);
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 13px 18px;
+  border-top: 1px solid var(--g-border);
+  background: var(--g-s0);
+}
+
+.dialog__privacy {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--g-t3);
+}
+
+.dialog__cta {
+  display: flex;
+  gap: 9px;
 }
 
 .btn {
-  padding: 0.55rem 1rem;
-  border: 1px solid var(--p-content-border-color);
+  height: 32px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
   border-radius: 9px;
-  background: var(--p-content-background);
-  color: var(--p-text-color);
-  font: inherit;
+  background: var(--g-s1);
+  border: 1px solid var(--g-border);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--g-t2);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 
 .btn:hover {
-  background: var(--p-content-hover-background);
+  background: var(--g-s2);
+  color: var(--g-t1);
 }
 
 .btn--primary {
-  border-color: var(--p-primary-color);
-  background: var(--p-primary-color);
-  color: var(--p-primary-contrast-color, #fff);
+  padding: 0 16px;
+  border: 0;
+  background: var(--g-accent);
+  color: var(--g-accent-fg);
+  font-weight: 600;
+  box-shadow: var(--g-sh1);
 }
 
 .btn--primary:hover {
-  filter: brightness(1.05);
+  background: var(--g-accent-h);
+  color: var(--g-accent-fg);
 }
 </style>
