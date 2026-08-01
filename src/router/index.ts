@@ -28,10 +28,10 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "Paramètres", icon: "pi pi-cog" },
   },
   {
-    // Session terminal ; pas de meta.title => absente de la navigation latérale.
-    path: "/terminal/:id",
+    path: "/terminal",
     name: "terminal",
-    component: () => import("@/pages/TerminalPage.vue"),
+    component: () => import("@/pages/TerminalWorkspace.vue"),
+    meta: { title: "Terminal", icon: "pi pi-desktop" },
   },
 ];
 

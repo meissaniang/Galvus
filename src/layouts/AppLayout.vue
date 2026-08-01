@@ -61,7 +61,13 @@ const navItems = computed<NavItem[]>(() =>
     </aside>
 
     <main class="app-content">
-      <router-view />
+      <!-- L'espace terminal est gardé en vie pour préserver les sessions PTY
+           quand on navigue vers d'autres pages puis qu'on revient. -->
+      <router-view v-slot="{ Component }">
+        <keep-alive :include="['TerminalWorkspace']">
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
     </main>
   </div>
 </template>

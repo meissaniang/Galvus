@@ -35,10 +35,10 @@ const filteredHosts = computed(() =>
   hosts.value.filter((h) => match([h.alias, h.hostname, h.user])),
 );
 
-// --- Connexions ---
+// --- Connexions (ouvrent un onglet dans l'espace terminal) ---
 function connectHost(host: Host): void {
-  const id = connections.start(host.alias, [host.alias]);
-  router.push({ name: "terminal", params: { id } });
+  connections.open(host.alias, [host.alias]);
+  router.push({ name: "terminal" });
 }
 
 function connectServer(server: Server): void {
@@ -46,8 +46,8 @@ function connectServer(server: Server): void {
   if (server.port !== 22) args.push("-p", String(server.port));
   if (server.identityFile) args.push("-i", server.identityFile);
   args.push(server.username ? `${server.username}@${server.hostname}` : server.hostname);
-  const id = connections.start(server.name, args);
-  router.push({ name: "terminal", params: { id } });
+  connections.open(server.name, args);
+  router.push({ name: "terminal" });
 }
 
 // --- CRUD via dialog ---
