@@ -104,6 +104,27 @@ async function copyPublic(key: SshKey): Promise<void> {
   }
 }
 
+// --- Visualisation de la clé privée (locale uniquement) ---
+const viewKey = ref<{ name: string; content: string } | null>(null);
+const privCopied = ref(false);
+
+async function viewPrivate(key: SshKey): Promise<void> {
+  try {
+    const content = await keysRepository.readPrivate(key.name);
+    privCopied.value = false;
+    viewKey.value = { name: key.name, content };
+  } catch {
+    /* erreur affichée via store.error */
+  }
+}
+
+async function copyPrivate(): Promise<void> {
+  if (!viewKey.value) return;
+  await navigator.clipboard.writeText(viewKey.value.content);
+  privCopied.value = true;
+  setTimeout(() => (privCopied.value = false), 1500);
+}
+
 onMounted(() => {
   if (keys.value.length === 0) store.load();
 });
@@ -154,6 +175,7 @@ onMounted(() => {
           :key-item="item"
           @remove="removeKey"
           @copy-public="copyPublic"
+          @view-private="viewPrivate"
         />
 
         <button class="invite" @click="openGenerate">
@@ -169,6 +191,45 @@ onMounted(() => {
         </button>
       </div>
     </div>
+
+    <!-- Dialog clé privée (affichage local) -->
+    <Transition name="dlg">
+      <div v-if="viewKey" class="overlay" @click.self="viewKey = null">
+        <div class="dialog dialog--wide" role="dialog" aria-modal="true">
+          <header class="dialog__head">
+            <div class="dialog__badge">
+              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+                <path d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z" stroke="currentColor" stroke-width="1.3" />
+                <circle cx="8" cy="8" r="1.7" stroke="currentColor" stroke-width="1.3" />
+              </svg>
+            </div>
+            <div class="dialog__titles">
+              <div class="dialog__title">Clé privée — {{ viewKey.name }}</div>
+              <div class="dialog__subtitle">~/.ssh/{{ viewKey.name }} · lecture locale, jamais transmise</div>
+            </div>
+            <button class="dialog__close" title="Fermer" @click="viewKey = null">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              </svg>
+            </button>
+          </header>
+
+          <div class="privwarn">
+            <span class="privwarn__mark">!</span>
+            Ne partagez jamais cette clé. Quiconque la possède peut se connecter à vos serveurs.
+          </div>
+
+          <pre class="privkey">{{ viewKey.content }}</pre>
+
+          <footer class="dialog__foot">
+            <button type="button" class="btn" @click="viewKey = null">Fermer</button>
+            <button type="button" class="btn btn--primary" @click="copyPrivate">
+              {{ privCopied ? "Copiée ✓" : "Copier" }}
+            </button>
+          </footer>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Dialog Générer -->
     <Transition name="dlg">
@@ -473,6 +534,71 @@ onMounted(() => {
   border-radius: 14px;
   box-shadow: var(--g-sh3);
   overflow: hidden;
+}
+
+.dialog--wide {
+  width: 600px;
+}
+
+.dialog__close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--g-t3);
+  background: var(--g-s2);
+  cursor: pointer;
+}
+
+.dialog__close:hover {
+  color: var(--g-t1);
+  background: var(--g-s3);
+}
+
+.privwarn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 14px 18px 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: var(--g-danger-soft);
+  border: 1px solid var(--g-danger);
+  font-size: 12px;
+  color: var(--g-t1);
+}
+
+.privwarn__mark {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--g-danger);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.privkey {
+  margin: 12px 18px 16px;
+  padding: 12px;
+  max-height: 300px;
+  overflow: auto;
+  border-radius: 10px;
+  background: var(--g-s0);
+  border: 1px solid var(--g-border);
+  font-family: var(--g-font-mono);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--g-t2);
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 .dlg-enter-active {

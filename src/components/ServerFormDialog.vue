@@ -474,8 +474,12 @@ function submit(): void {
   align-items: center;
   flex-wrap: wrap;
   gap: 5px;
-  padding: 3px 9px;
+  padding: 0 9px;
   transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+
+.tags__chip {
+  margin: 3px 0;
 }
 
 .tags__chip {

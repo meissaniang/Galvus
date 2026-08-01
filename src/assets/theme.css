@@ -76,6 +76,20 @@
   --g-sh3: 0 24px 60px rgba(0, 0, 0, 0.6);
 }
 
+/* ---------- Normalisation des champs (hauteur de contrôle 34px du DS) ----------
+   Supprime les steppers natifs des inputs numériques qui cassent l'alignement
+   des champs placés sur une même rangée. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* ---------- Accent Option B — cyan électrique (DS §01) ---------- */
 .accent-cyan {
   --g-accent: #0c8fae;

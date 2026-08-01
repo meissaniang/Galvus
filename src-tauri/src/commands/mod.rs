@@ -47,6 +47,12 @@ pub fn key_read_public(name: String) -> Result<String, AppError> {
     crate::ssh::keys::read_public_key(&name)
 }
 
+/// Lit le contenu de la clé privée (affichage local à la demande de l'utilisateur).
+#[tauri::command]
+pub fn key_read_private(name: String) -> Result<String, AppError> {
+    crate::ssh::keys::read_private_key(&name)
+}
+
 /// Liste les serveurs enregistrés par l'utilisateur.
 #[tauri::command]
 pub fn server_list(db: tauri::State<'_, Database>) -> Result<Vec<Server>, AppError> {

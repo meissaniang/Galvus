@@ -8,7 +8,11 @@ import type { SshKey } from "@/types/ssh";
  * badges privée / publique, warning « algorithme déprécié » pour RSA ≤ 2048.
  */
 const props = defineProps<{ keyItem: SshKey }>();
-const emit = defineEmits<{ remove: [key: SshKey]; copyPublic: [key: SshKey] }>();
+const emit = defineEmits<{
+  remove: [key: SshKey];
+  copyPublic: [key: SshKey];
+  viewPrivate: [key: SshKey];
+}>();
 
 const isEd25519 = computed(() => props.keyItem.keyType?.toUpperCase() === "ED25519");
 const isDeprecated = computed(
@@ -55,6 +59,17 @@ async function copyFingerprint(): Promise<void> {
         <div v-else class="kcard__sub">{{ keyItem.comment || keyItem.path }}</div>
       </div>
       <div class="kcard__actions">
+        <button
+          v-if="keyItem.hasPrivate"
+          class="kcard__icon"
+          title="Voir la clé privée"
+          @click="emit('viewPrivate', keyItem)"
+        >
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <path d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z" stroke="currentColor" stroke-width="1.3" />
+            <circle cx="8" cy="8" r="1.7" stroke="currentColor" stroke-width="1.3" />
+          </svg>
+        </button>
         <button class="kcard__icon" title="Copier la clé publique" @click="emit('copyPublic', keyItem)">
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
             <rect x="2.4" y="2.4" width="6.4" height="6.4" rx="1.6" stroke="currentColor" stroke-width="1.3" />

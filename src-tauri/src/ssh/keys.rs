@@ -133,6 +133,20 @@ pub fn read_public_key(name: &str) -> Result<String, AppError> {
     Ok(std::fs::read_to_string(path)?.trim().to_string())
 }
 
+/// Lit le contenu de la clé PRIVÉE `<name>` dans `~/.ssh`.
+///
+/// Affichage local uniquement (à la demande de l'utilisateur) : la clé ne
+/// quitte jamais la machine et n'est copiée nulle part par l'application.
+pub fn read_private_key(name: &str) -> Result<String, AppError> {
+    validate_key_name(name)?;
+    let dir = ssh_dir()?;
+    let path = dir.join(name);
+    if !path.is_file() {
+        return Err(AppError::Io(format!("clé privée introuvable : {name}")));
+    }
+    Ok(std::fs::read_to_string(path)?)
+}
+
 /// Supprime une clé (privée + publique) de `~/.ssh`.
 pub fn delete_key(name: &str) -> Result<(), AppError> {
     validate_key_name(name)?;

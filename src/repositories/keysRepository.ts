@@ -41,6 +41,11 @@ export const keysRepository = {
     return invoke<string>("key_read_public", { name });
   },
 
+  /** Contenu de la clé privée (affichage local uniquement). */
+  readPrivate(name: string): Promise<string> {
+    return invoke<string>("key_read_private", { name });
+  },
+
   /** Ouvre le sélecteur de fichier natif pour choisir une clé privée à importer. */
   async pickKeyFile(): Promise<string | null> {
     const selected = await open({
