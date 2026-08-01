@@ -29,6 +29,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(services::terminal::TerminalManager::default())
         .manage(services::tunnels::TunnelManager::default())
         .setup(|app| {
@@ -49,6 +50,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::list_hosts,
             commands::list_keys,
+            commands::key_generate,
+            commands::key_import,
+            commands::key_delete,
             commands::server_list,
             commands::server_create,
             commands::server_update,

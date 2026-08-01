@@ -3,6 +3,7 @@ import { computed } from "vue";
 import type { SshKey } from "@/types/ssh";
 
 const props = defineProps<{ keyItem: SshKey }>();
+const emit = defineEmits<{ remove: [key: SshKey] }>();
 
 const typeLabel = computed(() => {
   const t = props.keyItem.keyType ?? "?";
@@ -22,6 +23,9 @@ const shortFingerprint = computed(() => {
     <div class="key-card__icon">
       <i class="pi pi-key" />
     </div>
+    <button class="key-card__delete" title="Supprimer" @click="emit('remove', keyItem)">
+      <i class="pi pi-trash" />
+    </button>
     <div class="key-card__body">
       <div class="key-card__head">
         <h3 class="key-card__title" :title="keyItem.name">{{ keyItem.name }}</h3>
@@ -60,9 +64,40 @@ const shortFingerprint = computed(() => {
     box-shadow 0.15s ease;
 }
 
+.key-card {
+  position: relative;
+}
+
 .key-card:hover {
   border-color: var(--p-primary-color);
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
+}
+
+.key-card__delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--p-text-muted-color);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.key-card:hover .key-card__delete {
+  opacity: 1;
+}
+
+.key-card__delete:hover {
+  background: color-mix(in srgb, #ef4444 18%, transparent);
+  color: #ef4444;
 }
 
 .key-card__icon {

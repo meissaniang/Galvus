@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
-import { keysRepository } from "@/repositories/keysRepository";
+import { keysRepository, type GenerateKeyInput } from "@/repositories/keysRepository";
 import type { SshKey } from "@/types/ssh";
 
 export const useKeysStore = defineStore("keys", () => {
@@ -33,5 +33,32 @@ export const useKeysStore = defineStore("keys", () => {
     }
   }
 
-  return { keys, loading, error, query, filteredKeys, load };
+  async function generate(input: GenerateKeyInput): Promise<void> {
+    error.value = null;
+    try {
+      await keysRepository.generate(input);
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function importFrom(source: string, name: string): Promise<void> {
+    error.value = null;
+    try {
+      await keysRepository.import(source, name);
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  async function remove(name: string): Promise<void> {
+    await keysRepository.remove(name);
+    await load();
+  }
+
+  return { keys, loading, error, query, filteredKeys, load, generate, importFrom, remove };
 });

@@ -18,6 +18,29 @@ pub fn list_keys() -> Result<Vec<SshKey>, AppError> {
     crate::ssh::keys::list_keys()
 }
 
+/// Génère une nouvelle paire de clés dans `~/.ssh`.
+#[tauri::command]
+pub fn key_generate(
+    name: String,
+    key_type: String,
+    comment: String,
+    passphrase: String,
+) -> Result<SshKey, AppError> {
+    crate::ssh::keys::generate_key(&name, &key_type, &comment, &passphrase)
+}
+
+/// Importe une clé privée existante dans `~/.ssh`.
+#[tauri::command]
+pub fn key_import(source: String, name: String) -> Result<SshKey, AppError> {
+    crate::ssh::keys::import_key(&source, &name)
+}
+
+/// Supprime une clé de `~/.ssh`.
+#[tauri::command]
+pub fn key_delete(name: String) -> Result<(), AppError> {
+    crate::ssh::keys::delete_key(&name)
+}
+
 /// Liste les serveurs enregistrés par l'utilisateur.
 #[tauri::command]
 pub fn server_list(db: tauri::State<'_, Database>) -> Result<Vec<Server>, AppError> {
