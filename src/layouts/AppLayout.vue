@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { storeToRefs } from "pinia";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { useServersStore } from "@/stores/servers";
@@ -52,8 +53,28 @@ function onKeydown(event: KeyboardEvent): void {
   }
 }
 
+/**
+ * Déplacement de la fenêtre (barre de titre Overlay) : tout mousedown dans une
+ * zone marquée `data-tauri-drag-region` — hors contrôle interactif — démarre
+ * le drag natif. Double-clic : agrandir/restaurer, comme une barre de titre.
+ */
+function onDragRegion(event: MouseEvent): void {
+  if (event.button !== 0) return;
+  const target = event.target as HTMLElement | null;
+  if (!target) return;
+  if (target.closest("button, input, select, textarea, a, [role='switch']")) return;
+  if (!target.closest("[data-tauri-drag-region]")) return;
+  const win = getCurrentWindow();
+  if (event.detail === 2) {
+    void win.toggleMaximize();
+  } else {
+    void win.startDragging();
+  }
+}
+
 onMounted(() => {
   window.addEventListener("keydown", onKeydown);
+  window.addEventListener("mousedown", onDragRegion);
   // Charge les compteurs de la sidebar dès l'ouverture de l'app.
   if (hosts.value.length === 0) hostsStore.load();
   if (servers.value.length === 0) myServers.load();
@@ -61,7 +82,10 @@ onMounted(() => {
   if (tunnels.tunnels.length === 0) tunnels.load();
 });
 
-onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", onKeydown);
+  window.removeEventListener("mousedown", onDragRegion);
+});
 </script>
 
 <template>
@@ -70,7 +94,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
       <!-- Zone des feux macOS (fenêtre en titleBarStyle Overlay) + drag. -->
       <div class="sb__traffic" data-tauri-drag-region></div>
 
-      <div class="sb__brand">
+      <div class="sb__brand" data-tauri-drag-region>
         <div class="sb__logo">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <rect x="2.5" y="2.5" width="11" height="11" rx="3" stroke="var(--g-accent-fg)" stroke-width="1.6" />
