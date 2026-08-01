@@ -1,3 +1,13 @@
+// Modules du backend Galvus (voir chaque `mod.rs` pour la responsabilité).
+pub mod commands;
+pub mod config;
+pub mod database;
+pub mod errors;
+pub mod models;
+pub mod security;
+pub mod services;
+pub mod ssh;
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
