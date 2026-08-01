@@ -11,7 +11,7 @@ interface PersistedSettings {
 const DEFAULTS: PersistedSettings = {
   terminalFontSize: 13,
   terminalFontFamily:
-    'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
+    '"JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace',
 };
 
 function read(): PersistedSettings {

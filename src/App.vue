@@ -8,10 +8,8 @@ import AppLayout from "@/layouts/AppLayout.vue";
 
 <style>
 :root {
-  font-family:
-    Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
-    Arial, sans-serif;
-  font-size: 15px;
+  font-family: var(--g-font-ui);
+  font-size: 14px;
   line-height: 1.5;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -32,7 +30,7 @@ body,
 }
 
 body {
-  background: var(--p-content-background);
-  color: var(--p-text-color);
+  background: var(--g-app);
+  color: var(--g-t1);
 }
 </style>

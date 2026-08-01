@@ -1,0 +1,119 @@
+/**
+ * Galvus Design System — tokens (import de « Galvus Design System.dc.html »).
+ * Dark-first, accent vert émeraude. Les tokens --g-* portent le design ;
+ * ils sont mappés sur les variables PrimeVue --p-* (avec !important pour
+ * gagner sur le preset Aura injecté au runtime).
+ *
+ * Thème appliqué par le store `theme` via la classe .app-dark sur <html>.
+ */
+
+/* ---------- Thème clair (défaut :root) ---------- */
+:root {
+  --g-app: #e4eaf1;
+  --g-sidebar: #eaeff5;
+  --g-s0: #f5f8fb;
+  --g-s1: #ffffff;
+  --g-s2: #eef2f7;
+  --g-s3: #e1e8f0;
+  --g-border: #dce3ec;
+  --g-border-2: #c4cedb;
+  --g-t1: #121a25;
+  --g-t2: #54637a;
+  --g-t3: #7c8a9d;
+  --g-accent: #0e9f6e;
+  --g-accent-h: #0b8a5f;
+  --g-accent-fg: #ffffff;
+  --g-accent-soft: rgba(14, 159, 110, 0.12);
+  --g-accent-ring: rgba(14, 159, 110, 0.32);
+  --g-success: #0e9f6e;
+  --g-warning: #b7791f;
+  --g-danger: #d33a42;
+  --g-danger-soft: rgba(211, 58, 66, 0.1);
+  --g-info: #2563eb;
+  --g-term-bg: #0f1620;
+  --g-term-fg: #d6e1ec;
+  --g-sh1: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --g-sh2: 0 6px 18px rgba(16, 24, 40, 0.09);
+  --g-sh3: 0 24px 60px rgba(16, 24, 40, 0.18);
+
+  --g-font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --g-font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  --g-radius-chip: 6px;
+  --g-radius-field: 9px;
+  --g-radius-btn: 10px;
+  --g-radius-card: 12px;
+  --g-radius-dialog: 14px;
+}
+
+/* ---------- Thème sombre ---------- */
+.app-dark {
+  --g-app: #0b1017;
+  --g-sidebar: #10161f;
+  --g-s0: #161d27;
+  --g-s1: #1c242f;
+  --g-s2: #232c38;
+  --g-s3: #2b3542;
+  --g-border: #2a3441;
+  --g-border-2: #3a4657;
+  --g-t1: #e8eef6;
+  --g-t2: #9aa7b8;
+  --g-t3: #6b7a8d;
+  --g-accent: #23c48a;
+  --g-accent-h: #35d69a;
+  --g-accent-fg: #052018;
+  --g-accent-soft: rgba(35, 196, 138, 0.14);
+  --g-accent-ring: rgba(35, 196, 138, 0.38);
+  --g-success: #23c48a;
+  --g-warning: #e9a23b;
+  --g-danger: #f0565f;
+  --g-danger-soft: rgba(240, 86, 95, 0.14);
+  --g-info: #4c8dff;
+  --g-term-bg: #0b1017;
+  --g-term-fg: #d6e1ec;
+  --g-sh1: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --g-sh2: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --g-sh3: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- Mapping vers PrimeVue (--p-*) ---------- */
+/* !important pour l'emporter sur le preset Aura injecté au runtime. */
+:root,
+.app-dark {
+  --p-primary-color: var(--g-accent) !important;
+  --p-primary-hover-color: var(--g-accent-h) !important;
+  --p-primary-active-color: var(--g-accent-h) !important;
+  --p-primary-contrast-color: var(--g-accent-fg) !important;
+
+  --p-content-background: var(--g-s1) !important;
+  --p-content-hover-background: var(--g-s2) !important;
+  --p-content-border-color: var(--g-border) !important;
+  --p-content-color: var(--g-t1) !important;
+
+  --p-text-color: var(--g-t1) !important;
+  --p-text-hover-color: var(--g-t1) !important;
+  --p-text-muted-color: var(--g-t2) !important;
+
+  --p-highlight-background: var(--g-accent-soft) !important;
+  --p-highlight-color: var(--g-accent) !important;
+
+  --p-focus-ring-color: var(--g-accent-ring) !important;
+  --p-focus-ring-width: 3px !important;
+
+  --p-form-field-background: var(--g-s1) !important;
+  --p-form-field-border-color: var(--g-border-2) !important;
+  --p-form-field-hover-border-color: var(--g-border-2) !important;
+  --p-form-field-focus-border-color: var(--g-accent) !important;
+  --p-form-field-color: var(--g-t1) !important;
+  --p-form-field-placeholder-color: var(--g-t3) !important;
+  --p-form-field-border-radius: var(--g-radius-field) !important;
+
+  --p-red-500: var(--g-danger) !important;
+  --p-green-500: var(--g-success) !important;
+  --p-yellow-500: var(--g-warning) !important;
+  --p-blue-500: var(--g-info) !important;
+
+  --p-border-radius-sm: var(--g-radius-chip) !important;
+  --p-border-radius-md: var(--g-radius-field) !important;
+  --p-border-radius-lg: var(--g-radius-btn) !important;
+}

@@ -5,6 +5,7 @@ import Aura from "@primevue/themes/aura";
 
 import "primeicons/primeicons.css";
 import "primeflex/primeflex.css";
+import "@/assets/theme.css";
 
 import App from "./App.vue";
 import router from "@/router";

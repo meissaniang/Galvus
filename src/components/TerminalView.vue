@@ -36,10 +36,11 @@ onMounted(async () => {
     cursorBlink: true,
     scrollback: 5000,
     theme: {
-      background: "#0d1117",
-      foreground: "#e6edf3",
-      cursor: "#e6edf3",
-      selectionBackground: "#284566",
+      background: "#0b1017",
+      foreground: "#d6e1ec",
+      cursor: "#23c48a",
+      cursorAccent: "#0b1017",
+      selectionBackground: "rgba(35,196,138,.28)",
     },
   });
   fit = new FitAddon();
@@ -106,7 +107,7 @@ onBeforeUnmount(async () => {
   width: 100%;
   height: 100%;
   padding: 0.5rem;
-  background: #0d1117;
+  background: #0b1017;
   border-radius: 10px;
   overflow: hidden;
 }

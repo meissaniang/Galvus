@@ -78,8 +78,9 @@ const navItems = computed<NavItem[]>(() =>
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  color: var(--p-text-color);
-  background: var(--p-content-background);
+  color: var(--g-t1);
+  /* Zone de contenu = surface s0 (la sidebar est plus profonde). */
+  background: var(--g-s0);
 }
 
 .app-sidebar {
@@ -89,14 +90,9 @@ const navItems = computed<NavItem[]>(() =>
   flex-shrink: 0;
   padding: 1rem 0.75rem;
   gap: 1.25rem;
-  border-right: 1px solid var(--p-content-border-color);
-  /* Panneau légèrement plus sombre que le contenu (mode clair). */
-  background: color-mix(in srgb, var(--p-content-background) 96%, black);
-}
-
-/* En sombre : sidebar nettement plus profonde que la zone de contenu. */
-:global(.app-dark) .app-sidebar {
-  background: color-mix(in srgb, var(--p-content-background) 60%, black);
+  border-right: 1px solid var(--g-border);
+  /* Surface la plus profonde du système. */
+  background: var(--g-sidebar);
 }
 
 .app-brand {
