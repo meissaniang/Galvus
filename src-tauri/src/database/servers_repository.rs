@@ -28,9 +28,8 @@ const SELECT_COLUMNS: &str =
 
 /// Liste les serveurs (favoris d'abord, puis par nom).
 pub fn list(conn: &Connection) -> Result<Vec<Server>, AppError> {
-    let sql = format!(
-        "SELECT {SELECT_COLUMNS} FROM servers ORDER BY favorite DESC, name COLLATE NOCASE"
-    );
+    let sql =
+        format!("SELECT {SELECT_COLUMNS} FROM servers ORDER BY favorite DESC, name COLLATE NOCASE");
     let mut stmt = conn.prepare(&sql)?;
     let rows = stmt.query_map([], map_row)?;
     let mut servers = Vec::new();

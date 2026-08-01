@@ -17,7 +17,11 @@ pub struct TunnelManager {
 impl TunnelManager {
     /// Construit les arguments `ssh` d'un tunnel.
     fn build_args(tunnel: &Tunnel) -> Result<Vec<String>, AppError> {
-        let mut args = vec!["-N".to_string(), "-o".into(), "ExitOnForwardFailure=yes".into()];
+        let mut args = vec![
+            "-N".to_string(),
+            "-o".into(),
+            "ExitOnForwardFailure=yes".into(),
+        ];
         let host = tunnel.target_host.clone().unwrap_or_default();
         let port = tunnel.target_port.unwrap_or(0);
         match tunnel.kind.as_str() {
@@ -30,7 +34,11 @@ impl TunnelManager {
                 format!("{}:{}:{}", tunnel.listen_port, host, port),
             ]),
             "dynamic" => args.extend(["-D".into(), tunnel.listen_port.to_string()]),
-            other => return Err(AppError::Command(format!("type de tunnel inconnu : {other}"))),
+            other => {
+                return Err(AppError::Command(format!(
+                    "type de tunnel inconnu : {other}"
+                )))
+            }
         }
         args.push(tunnel.ssh_target.clone());
         Ok(args)

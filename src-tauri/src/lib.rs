@@ -32,12 +32,16 @@ pub fn run() {
         .manage(services::terminal::TerminalManager::default())
         .manage(services::tunnels::TunnelManager::default())
         .setup(|app| {
+            // Mécanisme de mise à jour signé (desktop uniquement).
+            #[cfg(desktop)]
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
+
             // Coffre natif -> clé de chiffrement -> ouverture de la base chiffrée.
             let key = security::vault::get_or_create_db_key()?;
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
-            let database =
-                database::Database::initialize(&data_dir.join("galvus.db"), &key)?;
+            let database = database::Database::initialize(&data_dir.join("galvus.db"), &key)?;
             app.manage(database);
             log::info!("Galvus démarré, base initialisée dans {data_dir:?}");
             Ok(())

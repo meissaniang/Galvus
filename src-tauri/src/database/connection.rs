@@ -84,7 +84,9 @@ fn ensure_column(
         .filter_map(Result::ok)
         .any(|name| name == column);
     if !exists {
-        conn.execute_batch(&format!("ALTER TABLE {table} ADD COLUMN {column} {declaration};"))?;
+        conn.execute_batch(&format!(
+            "ALTER TABLE {table} ADD COLUMN {column} {declaration};"
+        ))?;
     }
     Ok(())
 }
