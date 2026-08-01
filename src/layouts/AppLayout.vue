@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { useThemeStore } from "@/stores/theme";
 
 /**
  * Shell applicatif : sidebar de navigation + zone de contenu routée.
  * Les entrées de menu sont dérivées des routes déclarant un `meta.title`.
  */
 const router = useRouter();
+const theme = useThemeStore();
 
 interface NavItem {
   name: string;
@@ -46,6 +48,16 @@ const navItems = computed<NavItem[]>(() =>
           <span>{{ item.title }}</span>
         </router-link>
       </nav>
+
+      <button
+        type="button"
+        class="app-theme-toggle"
+        :title="theme.isDark ? 'Passer en clair' : 'Passer en sombre'"
+        @click="theme.toggle()"
+      >
+        <i :class="theme.isDark ? 'pi pi-sun' : 'pi pi-moon'" />
+        <span>{{ theme.isDark ? "Mode clair" : "Mode sombre" }}</span>
+      </button>
     </aside>
 
     <main class="app-content">
@@ -121,6 +133,29 @@ const navItems = computed<NavItem[]>(() =>
 .app-nav__link--active {
   background: var(--p-highlight-background);
   color: var(--p-highlight-color);
+}
+
+.app-theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: auto;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--p-content-border-color);
+  border-radius: var(--p-border-radius-md, 8px);
+  background: transparent;
+  color: var(--p-text-muted-color);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.app-theme-toggle:hover {
+  background: var(--p-content-hover-background);
+  color: var(--p-text-color);
 }
 
 .app-content {
