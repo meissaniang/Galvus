@@ -13,6 +13,29 @@ export interface Host {
   proxyJump: string | null;
 }
 
+/** Un serveur enregistré par l'utilisateur (persisté dans la base chiffrée). */
+export interface Server {
+  id: number;
+  name: string;
+  hostname: string;
+  port: number;
+  username: string | null;
+  identityFile: string | null;
+  color: string | null;
+  favorite: boolean;
+}
+
+/** Données de création/édition d'un serveur (sans identifiant). */
+export interface ServerInput {
+  name: string;
+  hostname: string;
+  port: number;
+  username: string | null;
+  identityFile: string | null;
+  color: string | null;
+  favorite: boolean;
+}
+
 /** Une clé SSH détectée dans ~/.ssh. */
 export interface SshKey {
   name: string;

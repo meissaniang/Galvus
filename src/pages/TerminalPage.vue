@@ -1,27 +1,42 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useConnectionsStore } from "@/stores/connections";
 import TerminalView from "@/components/TerminalView.vue";
 
 const route = useRoute();
 const router = useRouter();
+const connections = useConnectionsStore();
 
-const host = computed(() => String(route.params.alias));
+const id = computed(() => String(route.params.id));
+const target = computed(() => connections.get(id.value));
+
+function goBack(): void {
+  router.push({ name: "servers" });
+}
 </script>
 
 <template>
   <section class="terminal-page">
     <header class="terminal-page__bar">
-      <button class="back" title="Retour" @click="router.push({ name: 'servers' })">
+      <button class="back" title="Retour" @click="goBack">
         <i class="pi pi-arrow-left" />
       </button>
       <span class="terminal-page__title">
-        <i class="pi pi-desktop" /> {{ host }}
+        <i class="pi pi-desktop" /> {{ target?.label ?? "Session" }}
       </span>
-      <span class="terminal-page__hint">connexion via <code>ssh {{ host }}</code></span>
+      <span v-if="target" class="terminal-page__hint">
+        <code>ssh {{ target.args.join(" ") }}</code>
+      </span>
     </header>
 
-    <TerminalView :key="host" :host="host" class="terminal-page__view" />
+    <TerminalView v-if="target" :key="id" :args="target.args" class="terminal-page__view" />
+
+    <div v-else class="terminal-page__missing">
+      <i class="pi pi-info-circle" />
+      <p>Session introuvable (relancée après rechargement).</p>
+      <button class="back" @click="goBack">Retour aux serveurs</button>
+    </div>
   </section>
 </template>
 
@@ -43,8 +58,10 @@ const host = computed(() => String(route.params.alias));
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  gap: 0.4rem;
+  min-width: 36px;
   height: 36px;
+  padding: 0 0.6rem;
   border: 1px solid var(--p-content-border-color);
   border-radius: 9px;
   background: var(--p-content-background);
@@ -80,5 +97,15 @@ const host = computed(() => String(route.params.alias));
 .terminal-page__view {
   flex: 1;
   min-height: 0;
+}
+
+.terminal-page__missing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex: 1;
+  color: var(--p-text-muted-color);
 }
 </style>

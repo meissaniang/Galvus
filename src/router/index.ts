@@ -29,7 +29,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     // Session terminal ; pas de meta.title => absente de la navigation latérale.
-    path: "/terminal/:alias",
+    path: "/terminal/:id",
     name: "terminal",
     component: () => import("@/pages/TerminalPage.vue"),
   },

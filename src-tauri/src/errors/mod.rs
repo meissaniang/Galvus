@@ -16,11 +16,29 @@ pub enum AppError {
 
     #[error("Échec de la commande externe : {0}")]
     Command(String),
+
+    #[error("Coffre natif : {0}")]
+    Vault(String),
+
+    #[error("Base de données : {0}")]
+    Database(String),
 }
 
 impl From<std::io::Error> for AppError {
     fn from(value: std::io::Error) -> Self {
         AppError::Io(value.to_string())
+    }
+}
+
+impl From<keyring::Error> for AppError {
+    fn from(value: keyring::Error) -> Self {
+        AppError::Vault(value.to_string())
+    }
+}
+
+impl From<rusqlite::Error> for AppError {
+    fn from(value: rusqlite::Error) -> Self {
+        AppError::Database(value.to_string())
     }
 }
 

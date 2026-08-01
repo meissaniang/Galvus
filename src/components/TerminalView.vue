@@ -6,7 +6,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import { terminalRepository } from "@/repositories/terminalRepository";
 import "@xterm/xterm/css/xterm.css";
 
-const props = defineProps<{ host: string }>();
+const props = defineProps<{ args: string[] }>();
 
 const container = ref<HTMLDivElement | null>(null);
 const sessionId = crypto.randomUUID();
@@ -62,7 +62,7 @@ onMounted(async () => {
     terminalRepository.write(sessionId, data);
   });
 
-  await terminalRepository.open(sessionId, props.host, term.cols, term.rows);
+  await terminalRepository.open(sessionId, props.args, term.cols, term.rows);
   term.focus();
 
   resizeObserver = new ResizeObserver(() => {
