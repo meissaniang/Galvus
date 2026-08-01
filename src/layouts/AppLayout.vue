@@ -96,13 +96,15 @@ const navItems = computed<NavItem[]>(() =>
   align-items: center;
   gap: 0.6rem;
   padding: 0.5rem 0.6rem;
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--p-text-color);
 }
 
 .app-brand .pi {
   color: var(--p-primary-color);
-  font-size: 1.3rem;
+  font-size: 1.4rem;
 }
 
 .app-nav {
@@ -112,17 +114,23 @@ const navItems = computed<NavItem[]>(() =>
 }
 
 .app-nav__link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  padding: 0.6rem 0.75rem;
+  padding: 0.6rem 0.8rem;
   border-radius: var(--p-border-radius-md, 8px);
-  color: var(--p-text-muted-color);
+  /* Contraste renforcé : lisible sur fond sombre comme clair. */
+  color: color-mix(in srgb, var(--p-text-color) 78%, transparent);
   text-decoration: none;
   font-weight: 500;
   transition:
     background-color 0.15s ease,
     color 0.15s ease;
+}
+
+.app-nav__link .pi {
+  font-size: 1.05rem;
 }
 
 .app-nav__link:hover {
@@ -131,8 +139,21 @@ const navItems = computed<NavItem[]>(() =>
 }
 
 .app-nav__link--active {
-  background: var(--p-highlight-background);
-  color: var(--p-highlight-color);
+  background: color-mix(in srgb, var(--p-primary-color) 16%, transparent);
+  color: var(--p-primary-color);
+  font-weight: 600;
+}
+
+/* Barre d'accent à gauche de l'item actif. */
+.app-nav__link--active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--p-primary-color);
 }
 
 .app-theme-toggle {
@@ -144,7 +165,7 @@ const navItems = computed<NavItem[]>(() =>
   border: 1px solid var(--p-content-border-color);
   border-radius: var(--p-border-radius-md, 8px);
   background: transparent;
-  color: var(--p-text-muted-color);
+  color: color-mix(in srgb, var(--p-text-color) 78%, transparent);
   font: inherit;
   font-weight: 500;
   cursor: pointer;
