@@ -1,0 +1,4 @@
+# Autorise l'exécution du build-script d'esbuild (binaire natif requis par Vite).
+# pnpm >= 11 bloque par défaut les scripts postinstall non approuvés.
+allowBuilds:
+  esbuild: true
