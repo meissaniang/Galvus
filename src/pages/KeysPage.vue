@@ -640,6 +640,11 @@ onMounted(() => {
   justify-content: center;
 }
 
+.dialog__titles {
+  flex: 1;
+  min-width: 0;
+}
+
 .dialog__title {
   font-size: 15px;
   font-weight: 600;
