@@ -84,11 +84,13 @@ const navItems = computed<NavItem[]>(() =>
   padding: 1rem 0.75rem;
   gap: 1.25rem;
   border-right: 1px solid var(--p-content-border-color);
-  background: var(--p-surface-50);
+  /* Panneau légèrement plus sombre que le contenu (mode clair). */
+  background: color-mix(in srgb, var(--p-content-background) 96%, black);
 }
 
+/* En sombre : sidebar nettement plus profonde que la zone de contenu. */
 :global(.app-dark) .app-sidebar {
-  background: var(--p-surface-900);
+  background: color-mix(in srgb, var(--p-content-background) 60%, black);
 }
 
 .app-brand {

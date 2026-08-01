@@ -10,15 +10,16 @@ export type ThemeMode = "light" | "dark" | "system";
 /** Thème effectivement appliqué (jamais `system`). */
 export type ResolvedTheme = "light" | "dark";
 
-const STORAGE_KEY = "galvus.theme.mode";
+const STORAGE_KEY = "galvus.theme.mode.v2";
 /** Classe activant les tokens sombres de PrimeVue (voir `darkModeSelector` dans main.ts). */
 const DARK_CLASS = "app-dark";
 
 function readStoredMode(): ThemeMode {
   const value = localStorage.getItem(STORAGE_KEY);
+  // Par défaut : thème sombre (esthétique type Termius). Modifiable dans Paramètres.
   return value === "light" || value === "dark" || value === "system"
     ? value
-    : "system";
+    : "dark";
 }
 
 function systemPrefersDark(): boolean {

@@ -30,4 +30,9 @@ body,
   padding: 0;
   height: 100%;
 }
+
+body {
+  background: var(--p-content-background);
+  color: var(--p-text-color);
+}
 </style>
