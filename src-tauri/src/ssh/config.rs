@@ -104,3 +104,26 @@ fn resolve_host(alias: &str) -> Host {
 
     host
 }
+
+#[cfg(test)]
+mod tests {
+    use super::parse_host_aliases;
+
+    #[test]
+    fn extrait_les_alias_simples() {
+        let cfg = "Host web\n  HostName 1.2.3.4\nHost db\n  User root\n";
+        assert_eq!(parse_host_aliases(cfg), vec!["web", "db"]);
+    }
+
+    #[test]
+    fn ignore_les_motifs_generiques_et_commentaires() {
+        let cfg = "# commentaire\nHost *\n  ForwardAgent yes\nHost prod !staging\n";
+        assert_eq!(parse_host_aliases(cfg), vec!["prod"]);
+    }
+
+    #[test]
+    fn gere_plusieurs_alias_sur_une_ligne_sans_doublon() {
+        let cfg = "Host a b\nHost b c\n";
+        assert_eq!(parse_host_aliases(cfg), vec!["a", "b", "c"]);
+    }
+}
