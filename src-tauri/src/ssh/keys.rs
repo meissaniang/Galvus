@@ -207,6 +207,24 @@ fn has_insecure_permissions(_private_path: &Path) -> bool {
     false
 }
 
+/// Garantit que le fichier se termine par un saut de ligne.
+///
+/// OpenSSH refuse une clé dont la dernière ligne n'est pas terminée et renvoie
+/// alors un « invalid format » trompeur (cas fréquent des clés copiées-collées
+/// ou exportées par d'autres outils). La réparation est sûre : elle n'ajoute
+/// qu'un `\n` en fin de fichier.
+fn ensure_trailing_newline(path: &Path) -> Result<(), AppError> {
+    let bytes = std::fs::read(path)?;
+    if bytes.last() == Some(&b'\n') {
+        return Ok(());
+    }
+    let mut fixed = bytes;
+    fixed.push(b'\n');
+    std::fs::write(path, fixed)?;
+    log::info!("saut de ligne final ajouté à {}", path.display());
+    Ok(())
+}
+
 /// Restaure les permissions 600 sur la clé privée.
 pub fn fix_permissions(name: &str) -> Result<(), AppError> {
     validate_key_name(name)?;
@@ -266,6 +284,9 @@ pub fn change_passphrase(
         return Err(AppError::Io(format!("clé privée introuvable : {name}")));
     }
     let _ = std::fs::copy(&path, dir.join(format!("{name}.bak")));
+    // Répare le cas fréquent du fichier sans saut de ligne final, qu'OpenSSH
+    // rejette avec un « invalid format » peu explicite.
+    ensure_trailing_newline(&path)?;
 
     let output = Command::new("ssh-keygen")
         .arg("-p")
@@ -281,10 +302,13 @@ pub fn change_passphrase(
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let message = stderr.trim();
-        let friendly = if message.to_lowercase().contains("incorrect passphrase")
-            || message.to_lowercase().contains("load failed")
-        {
+        let lower = message.to_lowercase();
+        let friendly = if lower.contains("incorrect passphrase") || lower.contains("load failed") {
             "passphrase actuelle incorrecte".to_string()
+        } else if lower.contains("invalid format") {
+            "format de clé non reconnu par OpenSSH (fichier corrompu ou tronqué)".to_string()
+        } else if lower.contains("unprotected private key") {
+            "permissions trop ouvertes : corrigez-les (600) avant de continuer".to_string()
         } else {
             message.to_string()
         };
