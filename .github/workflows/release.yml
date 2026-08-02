@@ -218,3 +218,67 @@ jobs:
               draft: false,
               make_latest: "true",
             });
+
+  # 4. Régénère le cask Homebrew avec la nouvelle version et ses empreintes.
+  homebrew:
+    needs: publish
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Mettre à jour le cask
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
+
+          for arch in aarch64 x64; do
+            curl -fsSL -o "galvus-${arch}.dmg" "${base}/Galvus_${version}_${arch}-macos.dmg"
+          done
+          sha_arm="$(sha256sum galvus-aarch64.dmg | cut -d' ' -f1)"
+          sha_intel="$(sha256sum galvus-x64.dmg | cut -d' ' -f1)"
+          rm -f galvus-*.dmg
+
+          mkdir -p Casks
+          cat > Casks/galvus.rb <<EOF
+          # Généré automatiquement à chaque release par .github/workflows/release.yml.
+          cask "galvus" do
+            arch arm: "aarch64", intel: "x64"
+
+            version "${version}"
+            sha256 arm:   "${sha_arm}",
+                   intel: "${sha_intel}"
+
+            url "https://github.com/${GITHUB_REPOSITORY}/releases/download/v#{version}/Galvus_#{version}_#{arch}-macos.dmg",
+                verified: "github.com/${GITHUB_REPOSITORY}/"
+            name "Galvus"
+            desc "Client SSH desktop moderne, open source et 100 % local"
+            homepage "https://github.com/${GITHUB_REPOSITORY}"
+
+            app "Galvus.app"
+
+            # L'application n'est pas signée par un certificat Apple : sans cela, macOS
+            # afficherait « Galvus est endommagé » au premier lancement.
+            postflight do
+              system_command "/usr/bin/xattr",
+                             args: ["-dr", "com.apple.quarantine", "#{appdir}/Galvus.app"]
+            end
+
+            zap trash: [
+              "~/Library/Application Support/com.galvus.app",
+              "~/Library/Caches/com.galvus.app",
+              "~/Library/Logs/com.galvus.app",
+              "~/Library/Preferences/com.galvus.app.plist",
+              "~/Library/Saved Application State/com.galvus.app.savedState",
+              "~/Library/WebKit/com.galvus.app",
+            ]
+          end
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/galvus.rb
+          git diff --quiet --cached || git commit -m "chore(homebrew): cask ${version}"
+          git push

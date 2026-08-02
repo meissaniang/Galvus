@@ -43,6 +43,18 @@ réimplémente pas le protocole SSH. Les métadonnées sont stockées dans une b
 
 ## Installation
 
+### macOS — Homebrew (recommandé)
+
+```bash
+brew tap meissaniang/galvus https://github.com/meissaniang/Galvus
+brew install --cask galvus
+```
+
+C'est la méthode la plus simple : Homebrew installe l'application, lève lui-même
+la mise en quarantaine et gère les mises à jour avec `brew upgrade --cask galvus`.
+
+### Téléchargement direct
+
 Rendez-vous sur la page [Releases](https://github.com/meissaniang/Galvus/releases/latest)
 et choisissez le fichier correspondant à votre machine.
 
