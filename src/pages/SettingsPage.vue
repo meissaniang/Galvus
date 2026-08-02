@@ -263,7 +263,7 @@ const previewStyle = computed(() => ({
             <span class="sec__detail">Connexions via le binaire OpenSSH du système. Aucune réimplémentation du protocole.</span>
           </div>
           <div class="sec">
-            <span class="sec__title">100 % hors ligne</span>
+            <span class="sec__title">100 % local</span>
             <span class="sec__detail">Aucune donnée ne quitte votre machine. Pas de télémétrie.</span>
           </div>
         </div>

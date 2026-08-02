@@ -115,7 +115,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="sb__brand-text">
           <span class="sb__name">Galvus</span>
-          <span class="sb__version">v0.1.0 · offline</span>
+          <span class="sb__version">v0.1.0 · 100 % local</span>
         </div>
       </div>
 
