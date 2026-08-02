@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { isMac, shortcut } from "@/utils/platform";
 import { storeToRefs } from "pinia";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { useServersStore } from "@/stores/servers";
@@ -100,8 +101,9 @@ onBeforeUnmount(() => {
 <template>
   <div class="app-shell">
     <aside class="sb">
-      <!-- Zone des feux macOS (fenêtre en titleBarStyle Overlay) + drag. -->
-      <div class="sb__traffic" data-tauri-drag-region></div>
+      <!-- Bande réservée aux feux macOS (fenêtre en titleBarStyle Overlay).
+           Ailleurs, la barre de titre native occupe déjà cet espace. -->
+      <div v-if="isMac" class="sb__traffic" data-tauri-drag-region></div>
 
       <div class="sb__brand" data-galvus-drag>
         <div class="sb__logo">
@@ -162,7 +164,7 @@ onBeforeUnmount(() => {
             <path d="M5.5 7.2l2 1.9-2 1.9M9.6 11.2h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
           </svg>
           <span class="sb__text">Terminal</span>
-          <span class="sb__kbd">⌘T</span>
+          <span class="sb__kbd">{{ shortcut("T") }}</span>
         </router-link>
 
         <router-link :to="{ name: 'settings' }" class="sb__item" :class="{ 'sb__item--on': isActive('settings') }">

@@ -43,6 +43,11 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
+      - name: Dépendances de compilation (Windows)
+        if: matrix.platform == 'windows-latest'
+        # OpenSSL (vendored par SQLCipher) se compile avec NASM et Perl.
+        run: choco install nasm strawberryperl -y --no-progress
+
       - name: Dépendances système (Linux)
         if: matrix.platform == 'ubuntu-22.04'
         run: |

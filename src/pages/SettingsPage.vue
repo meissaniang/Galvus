@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { useSettingsStore, type Accent } from "@/stores/settings";
+import { shortcut } from "@/utils/platform";
 
 /**
  * Écran Paramètres — fidèle à « ScreenSettings.dc.html » : sous-navigation
@@ -43,11 +44,11 @@ const FONTS = [
 ];
 
 const SHORTCUTS = [
-  { keys: "⌘K", action: "Rechercher un serveur" },
-  { keys: "⌘T", action: "Ouvrir l'espace terminal" },
-  { keys: "⌘D", action: "Split vertical du pane actif" },
-  { keys: "⌘⇧D", action: "Split horizontal du pane actif" },
-  { keys: "⌘W", action: "Fermer le pane actif" },
+  { keys: shortcut("K"), action: "Rechercher un serveur" },
+  { keys: shortcut("T"), action: "Ouvrir l'espace terminal" },
+  { keys: shortcut("D"), action: "Split vertical du pane actif" },
+  { keys: shortcut("\u21e7D"), action: "Split horizontal du pane actif" },
+  { keys: shortcut("W"), action: "Fermer le pane actif" },
 ];
 
 // Toast « Préférences enregistrées » (apparaît à chaque sauvegarde).

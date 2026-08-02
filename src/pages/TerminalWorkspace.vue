@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useConnectionsStore, type TerminalTab } from "@/stores/connections";
 import TerminalView from "@/components/TerminalView.vue";
+import { shortcut } from "@/utils/platform";
 
 /**
  * Espace terminal — fidèle à « ScreenTerminal.dc.html » : barre d'onglets sur
@@ -76,7 +77,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
           {{ abbr(tab.panes[0]?.label ?? "") }}
         </span>
         <span class="wtab__label">{{ connections.tabTitle(tab) }}</span>
-        <button class="wtab__close" title="Fermer l'onglet (⌘W)" @click.stop="connections.closeTab(tab.id)">
+        <button class="wtab__close" :title="`Fermer l'onglet (${shortcut('W')})`" @click.stop="connections.closeTab(tab.id)">
           <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
             <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
           </svg>
@@ -95,7 +96,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
         <button
           class="splitbtn"
           :class="{ 'splitbtn--on': activeTab.direction === 'row' && activeTab.panes.length > 1 }"
-          title="Split vertical (⌘D)"
+          :title="`Split vertical (${shortcut('D')})`"
           @click="connections.splitActive('row')"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -106,7 +107,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
         <button
           class="splitbtn"
           :class="{ 'splitbtn--on': activeTab.direction === 'column' && activeTab.panes.length > 1 }"
-          title="Split horizontal (⌘⇧D)"
+          :title="`Split horizontal (${shortcut('\u21e7D')})`"
           @click="connections.splitActive('column')"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -143,7 +144,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
             <button
               v-if="tab.panes.length > 1"
               class="pane__close"
-              title="Fermer ce pane (⌘W)"
+              :title="`Fermer ce pane (${shortcut('W')})`"
               @click.stop="connections.closePane(tab.id, pane.id)"
             >
               <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
@@ -172,7 +173,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
       <span class="statusbar__strong">{{ statusText(activeTab) }}</span>
       <span>scrollback 5 000 lignes</span>
       <span class="statusbar__spacer" />
-      <span>⌘D split · ⌘⇧D split H · ⌘W fermer</span>
+      <span>{{ shortcut("D") }} split · {{ shortcut("\u21e7D") }} split H · {{ shortcut("W") }} fermer</span>
     </div>
   </section>
 </template>

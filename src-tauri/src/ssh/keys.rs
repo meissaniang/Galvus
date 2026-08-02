@@ -36,7 +36,24 @@ fn secure_private(path: &Path) -> Result<(), AppError> {
     std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
     Ok(())
 }
-#[cfg(not(unix))]
+/// Sur Windows, OpenSSH vérifie les ACL et non les bits Unix : on restreint le
+/// fichier au seul propriétaire via `icacls`.
+#[cfg(windows)]
+fn secure_private(path: &Path) -> Result<(), AppError> {
+    let user = std::env::var("USERNAME").unwrap_or_default();
+    if user.is_empty() {
+        return Ok(());
+    }
+    let mut cmd = Command::new("icacls");
+    cmd.arg(path)
+        .arg("/inheritance:r")
+        .arg("/grant:r")
+        .arg(format!("{user}:F"));
+    let _ = cmd.output().map_err(|e| AppError::Command(e.to_string()))?;
+    Ok(())
+}
+
+#[cfg(not(any(unix, windows)))]
 fn secure_private(_path: &Path) -> Result<(), AppError> {
     Ok(())
 }
@@ -202,6 +219,8 @@ fn has_insecure_permissions(private_path: &Path) -> bool {
         .map(|m| m.permissions().mode() & 0o077 != 0)
         .unwrap_or(false)
 }
+/// Sur Windows, la notion de « permissions trop ouvertes » repose sur les ACL,
+/// que l'on ne diagnostique pas ici : on ne signale donc rien.
 #[cfg(not(unix))]
 fn has_insecure_permissions(_private_path: &Path) -> bool {
     false

@@ -11,6 +11,7 @@ import ServerCard from "@/components/ServerCard.vue";
 import ServerFormDialog from "@/components/ServerFormDialog.vue";
 import ConfigHostDialog from "@/components/ConfigHostDialog.vue";
 import type { ConfigHostInput, Host, Server, ServerInput } from "@/types/ssh";
+import { shortcut } from "@/utils/platform";
 
 /**
  * Écran Serveurs — implémentation fidèle de « ScreenServers.dc.html » :
@@ -223,7 +224,7 @@ function addressOf(server: Server): string {
           placeholder="Rechercher un serveur, un tag, un host…"
           spellcheck="false"
         />
-        <span class="search__kbd">⌘K</span>
+        <span class="search__kbd">{{ shortcut("K") }}</span>
       </div>
 
       <label class="sort">
