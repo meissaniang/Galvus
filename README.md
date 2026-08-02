@@ -55,9 +55,24 @@ et choisissez le fichier correspondant à votre machine.
 | Linux (Fedora/RHEL)   | `Galvus-<version>-1.x86_64-linux.rpm`                   |
 | Linux (universel)     | `Galvus_<version>_amd64-linux.AppImage`                 |
 
-> **Binaires non signés.** Au premier lancement, macOS exige un clic droit sur
-> l'application → **Ouvrir**, et Windows affiche un avertissement SmartScreen
-> (_Informations complémentaires_ → _Exécuter quand même_).
+### Premier lancement
+
+Les binaires ne sont pas signés, faute de certificat d'éditeur. Les systèmes
+affichent donc un avertissement au premier lancement.
+
+**macOS** — le message « Galvus est endommagé et ne peut pas être ouvert » est
+trompeur : l'application est intacte, c'est Gatekeeper qui refuse un binaire sans
+certificat Apple. Déplacez Galvus dans `Applications`, puis retirez l'attribut de
+quarantaine :
+
+```bash
+xattr -dr com.apple.quarantine /Applications/Galvus.app
+```
+
+L'application s'ouvre ensuite normalement, une fois pour toutes.
+
+**Windows** — SmartScreen affiche un écran bleu : cliquez sur _Informations
+complémentaires_ puis _Exécuter quand même_.
 
 **Prérequis** : un client OpenSSH sur la machine — présent par défaut sur macOS et
 Linux, ainsi que sur Windows 10 (1809+) et Windows 11.

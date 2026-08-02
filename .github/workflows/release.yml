@@ -43,8 +43,20 @@ jobs:
           | Windows | `Galvus_*_x64-setup-windows.exe` ou `Galvus_*_x64_en-US-windows.msi` |
           | Linux | `Galvus_*_amd64-linux.AppImage`, `-linux.deb` ou `-linux.rpm` |
 
-          Les binaires ne sont pas signés : macOS demande un clic droit → **Ouvrir**
-          au premier lancement, Windows affiche un avertissement SmartScreen.
+          ### Premier lancement
+
+          Les binaires ne sont pas signés, faute de certificat d'éditeur.
+
+          **macOS** — le message « Galvus est endommagé » est trompeur : c'est
+          Gatekeeper qui refuse un binaire sans certificat Apple. Déplacez
+          l'application dans `Applications`, puis lancez :
+
+          ```
+          xattr -dr com.apple.quarantine /Applications/Galvus.app
+          ```
+
+          **Windows** — SmartScreen : *Informations complémentaires* →
+          *Exécuter quand même*.
 
           **Prérequis** : un client OpenSSH sur la machine (présent par défaut sur
           macOS, Linux, Windows 10 1809+ et Windows 11).
