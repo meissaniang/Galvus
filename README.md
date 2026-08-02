@@ -6,10 +6,13 @@
 
 **Client SSH desktop moderne, open source et 100 % local.**
 
+[![Dernière version](https://img.shields.io/github/v/release/meissaniang/Galvus?color=23C48A&label=version)](https://github.com/meissaniang/Galvus/releases/latest)
+[![Téléchargements](https://img.shields.io/github/downloads/meissaniang/Galvus/total?color=23C48A&label=téléchargements)](https://github.com/meissaniang/Galvus/releases)
 [![CI](https://github.com/meissaniang/Galvus/actions/workflows/ci.yml/badge.svg)](https://github.com/meissaniang/Galvus/actions/workflows/ci.yml)
-[![Release](https://github.com/meissaniang/Galvus/actions/workflows/release.yml/badge.svg)](https://github.com/meissaniang/Galvus/actions/workflows/release.yml)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-23C48A)](LICENSE)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2-24C8DB)](https://tauri.app)
+
+**[⬇ Télécharger la dernière version](https://github.com/meissaniang/Galvus/releases/latest)**
 
 </div>
 
@@ -40,17 +43,21 @@ réimplémente pas le protocole SSH. Les métadonnées sont stockées dans une b
 
 ## Installation
 
-Téléchargez la dernière version depuis la page
-[Releases](https://github.com/meissaniang/Galvus/releases) :
+Rendez-vous sur la page [Releases](https://github.com/meissaniang/Galvus/releases/latest)
+et choisissez le fichier correspondant à votre machine.
 
-| Plateforme | Fichier                       |
-| ---------- | ----------------------------- |
-| macOS      | `.dmg`                        |
-| Windows    | `.msi` ou l'installeur `.exe` |
-| Linux      | `.AppImage`, `.deb` ou `.rpm` |
+| Plateforme            | Fichier à télécharger                           |
+| --------------------- | ----------------------------------------------- |
+| macOS (Apple Silicon) | `Galvus_<version>_aarch64.dmg`                  |
+| macOS (Intel)         | `Galvus_<version>_x64.dmg`                      |
+| Windows               | `Galvus_<version>_x64-setup.exe` (ou le `.msi`) |
+| Linux (Debian/Ubuntu) | `Galvus_<version>_amd64.deb`                    |
+| Linux (Fedora/RHEL)   | `Galvus-<version>-1.x86_64.rpm`                 |
+| Linux (universel)     | `Galvus_<version>_amd64.AppImage`               |
 
-> Les binaires ne sont pas encore signés. macOS demande un clic droit → **Ouvrir**
-> au premier lancement, et Windows affiche un avertissement SmartScreen.
+> **Binaires non signés.** Au premier lancement, macOS exige un clic droit sur
+> l'application → **Ouvrir**, et Windows affiche un avertissement SmartScreen
+> (_Informations complémentaires_ → _Exécuter quand même_).
 
 **Prérequis** : un client OpenSSH sur la machine — présent par défaut sur macOS et
 Linux, ainsi que sur Windows 10 (1809+) et Windows 11.

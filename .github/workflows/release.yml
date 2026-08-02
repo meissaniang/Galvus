@@ -7,19 +7,85 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
+  # 1. Crée la release en brouillon avec les notes extraites du CHANGELOG.
+  create-release:
+    runs-on: ubuntu-22.04
+    outputs:
+      release_id: ${{ steps.create.outputs.result }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extraire les notes de version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          # Section du CHANGELOG comprise entre "## [version]" et le titre suivant.
+          awk -v v="$version" '
+            /^## \[/ { if (found) exit; if (index($0, "[" v "]")) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "Voir le [CHANGELOG](https://github.com/meissaniang/Galvus/blob/main/CHANGELOG.md)." > notes.md
+          fi
+          cat >> notes.md <<'EOF'
+
+          ---
+
+          ## Téléchargements
+
+          | Plateforme | Fichier |
+          | --- | --- |
+          | macOS (Apple Silicon) | `Galvus_*_aarch64.dmg` |
+          | macOS (Intel) | `Galvus_*_x64.dmg` |
+          | Windows | `Galvus_*_x64-setup.exe` ou `Galvus_*_x64_en-US.msi` |
+          | Linux | `Galvus_*_amd64.AppImage`, `.deb` ou `.rpm` |
+
+          Les binaires ne sont pas signés : macOS demande un clic droit → **Ouvrir**
+          au premier lancement, Windows affiche un avertissement SmartScreen.
+
+          **Prérequis** : un client OpenSSH sur la machine (présent par défaut sur
+          macOS, Linux, Windows 10 1809+ et Windows 11).
+          EOF
+
+      - uses: actions/github-script@v7
+        id: create
+        with:
+          script: |
+            const fs = require("fs");
+            const body = fs.readFileSync("notes.md", "utf8");
+            const tag = process.env.GITHUB_REF_NAME;
+            const { data } = await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `Galvus ${tag}`,
+              body,
+              draft: true,
+              prerelease: false,
+            });
+            return data.id;
+
+  # 2. Compile et téléverse les installeurs de chaque plateforme.
   build:
-    permissions:
-      contents: write
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: macos-latest
-            args: "--target universal-apple-darwin"
+            target: aarch64-apple-darwin
+            args: "--target aarch64-apple-darwin"
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            args: "--target x86_64-apple-darwin"
           - platform: ubuntu-22.04
+            target: ""
             args: ""
           - platform: windows-latest
+            target: ""
             args: ""
     runs-on: ${{ matrix.platform }}
     steps:
@@ -36,12 +102,13 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
 
       - name: Cache cargo
         uses: swatinem/rust-cache@v2
         with:
           workspaces: "./src-tauri -> target"
+          key: ${{ matrix.platform }}-${{ matrix.target }}
 
       - name: Dépendances de compilation (Windows)
         if: matrix.platform == 'windows-latest'
@@ -59,10 +126,10 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Secrets à configurer dans le dépôt pour la signature des mises à jour :
+          # Signature des mises à jour (à configurer dans les secrets du dépôt).
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Signature/notarisation macOS (optionnels ; laisser vides tant que non fournis) :
+          # Signature et notarisation macOS (optionnelles tant qu'absentes).
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
@@ -70,9 +137,21 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Galvus ${{ github.ref_name }}"
-          releaseBody: "Voir les notes de version."
-          releaseDraft: true
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
+
+  # 3. Publie la release une fois tous les assets téléversés.
+  publish:
+    needs: [create-release, build]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: ${{ needs.create-release.outputs.release_id }},
+              draft: false,
+              make_latest: "true",
+            });
