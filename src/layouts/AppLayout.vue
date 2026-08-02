@@ -105,9 +105,12 @@ onBeforeUnmount(() => {
 
       <div class="sb__brand" data-galvus-drag>
         <div class="sb__logo">
+          <!-- Éclair « Galvus » (galvanique) — même tracé que l'icône de l'app. -->
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect x="2.5" y="2.5" width="11" height="11" rx="3" stroke="var(--g-accent-fg)" stroke-width="1.6" />
-            <circle cx="8" cy="8" r="2.1" fill="var(--g-accent-fg)" />
+            <path
+              d="M8.75 3.0 L4.64 8.75 L7.41 8.75 L6.74 13.0 L11.36 7.07 L8.50 7.07 Z"
+              fill="var(--g-accent-fg)"
+            />
           </svg>
         </div>
         <div class="sb__brand-text">

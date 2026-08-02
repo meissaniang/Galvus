@@ -1,8 +1,10 @@
 """Génère l'icône Galvus 1024x1024 (PNG RGBA) sans dépendance externe.
 
 Rendu par champs de distance signés (SDF) pour un anticrénelage propre :
-fond squircle sombre du design system + glyphe accent (carré arrondi + point),
-repris du logo « GalvusSidebar.dc.html ».
+squircle sombre du design system + éclair accent (« Galvus » ← galvanique).
+
+Usage : python3 design/make-icon.py
+        pnpm tauri icon design/galvus-icon.png
 """
 
 import math
@@ -16,25 +18,44 @@ OUT = "design/galvus-icon.png"
 BG_TOP = (0x1C, 0x24, 0x2F)      # --g-s1
 BG_BOTTOM = (0x0B, 0x10, 0x17)   # --g-app
 ACCENT = (0x23, 0xC4, 0x8A)      # --g-accent
-ACCENT_DIM = (0x0E, 0x9F, 0x6E)  # dégradé du glyphe
+ACCENT_DIM = (0x0E, 0x9F, 0x6E)  # bas du dégradé du glyphe
 
 R_OUTER = 0.2237 * S             # rayon squircle macOS
-MARGIN = 0.0                     # l'icône occupe tout le carré
 
-# Glyphe : carré arrondi (contour) + disque central, proportions du logo SVG
-# d'origine (rect 11/16 avec rx 3, cercle r 2.1).
-G_HALF = 0.2600 * S              # demi-côté du carré du glyphe
-G_RADIUS = 0.0950 * S            # rayon des coins du glyphe
-G_STROKE = 0.0470 * S            # épaisseur du contour
-DOT_R = 0.0980 * S               # rayon du point central
+# Éclair : polygone en fractions du côté, centré sur l'origine.
+BOLT = [
+    (0.047, -0.315),
+    (-0.210, 0.047),
+    (-0.037, 0.047),
+    (-0.079, 0.315),
+    (0.210, -0.058),
+    (0.031, -0.058),
+]
 
 
-def sdf_round_rect(px, py, half, radius):
+def sd_round_rect(px, py, half, radius):
     """Distance signée à un carré arrondi centré à l'origine."""
-    qx = abs(px) - (half - radius)
-    qy = abs(py) - (half - radius)
-    ax, ay = max(qx, 0.0), max(qy, 0.0)
-    return math.hypot(ax, ay) + min(max(qx, qy), 0.0) - radius
+    qx, qy = abs(px) - (half - radius), abs(py) - (half - radius)
+    return math.hypot(max(qx, 0.0), max(qy, 0.0)) + min(max(qx, qy), 0.0) - radius
+
+
+def sd_polygon(px, py, verts):
+    """Distance signée à un polygone (négative à l'intérieur)."""
+    n = len(verts)
+    d = (px - verts[0][0]) ** 2 + (py - verts[0][1]) ** 2
+    s = 1.0
+    for i in range(n):
+        j = (i - 1) % n
+        ex, ey = verts[j][0] - verts[i][0], verts[j][1] - verts[i][1]
+        wx, wy = px - verts[i][0], py - verts[i][1]
+        denom = ex * ex + ey * ey
+        t = 0.0 if denom == 0 else max(0.0, min(1.0, (wx * ex + wy * ey) / denom))
+        bx, by = wx - ex * t, wy - ey * t
+        d = min(d, bx * bx + by * by)
+        c1, c2, c3 = py >= verts[i][1], py < verts[j][1], ex * wy > ey * wx
+        if (c1 and c2 and c3) or (not c1 and not c2 and not c3):
+            s = -s
+    return s * math.sqrt(d)
 
 
 def coverage(d):
@@ -46,6 +67,7 @@ def blend(dst, src, a):
     return tuple(int(round(dst[i] * (1 - a) + src[i] * a)) for i in range(3))
 
 
+bolt = [(vx * S, vy * S) for vx, vy in BOLT]
 rows = bytearray()
 cx = cy = S / 2.0
 
@@ -54,28 +76,20 @@ for y in range(S):
     py = y + 0.5 - cy
     t = y / (S - 1)
     bg = tuple(int(round(BG_TOP[i] + (BG_BOTTOM[i] - BG_TOP[i]) * t)) for i in range(3))
-    glyph = tuple(int(round(ACCENT[i] + (ACCENT_DIM[i] - ACCENT[i]) * t * 0.55)) for i in range(3))
+    glyph = tuple(
+        int(round(ACCENT[i] + (ACCENT_DIM[i] - ACCENT[i]) * t * 0.55)) for i in range(3)
+    )
 
     for x in range(S):
         px = x + 0.5 - cx
 
-        # Silhouette de l'icône (squircle) -> alpha du pixel.
-        a_icon = coverage(sdf_round_rect(px, py, S / 2.0 - MARGIN, R_OUTER))
+        a_icon = coverage(sd_round_rect(px, py, S / 2.0, R_OUTER))
         if a_icon <= 0.0:
             rows.extend((0, 0, 0, 0))
             continue
 
         color = bg
-
-        # Contour du carré arrondi : |sdf| - demi-épaisseur.
-        d_ring = abs(sdf_round_rect(px, py, G_HALF, G_RADIUS)) - G_STROKE / 2.0
-        a_ring = coverage(d_ring)
-
-        # Disque central.
-        d_dot = math.hypot(px, py) - DOT_R
-        a_dot = coverage(d_dot)
-
-        a_glyph = max(a_ring, a_dot)
+        a_glyph = coverage(sd_polygon(px, py, bolt))
         if a_glyph > 0.0:
             color = blend(color, glyph, a_glyph)
 
