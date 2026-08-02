@@ -57,9 +57,29 @@ jobs:
             const fs = require("fs");
             const body = fs.readFileSync("notes.md", "utf8");
             const tag = process.env.GITHUB_REF_NAME;
+            const { owner, repo } = context.repo;
+
+            // Réutilise la release si le tag a déjà été poussé (relance après
+            // un échec de build), au lieu d'échouer sur un doublon.
+            try {
+              const { data } = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: data.id,
+                name: `Galvus ${tag}`,
+                body,
+                draft: true,
+              });
+              core.info(`Release existante réutilisée (#${data.id})`);
+              return data.id;
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
             const { data } = await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner,
+              repo,
               tag_name: tag,
               name: `Galvus ${tag}`,
               body,
@@ -122,19 +142,14 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Note : ne déclarez APPLE_CERTIFICATE, APPLE_SIGNING_IDENTITY,
+      # APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID et TAURI_SIGNING_PRIVATE_KEY
+      # qu'une fois les secrets réellement renseignés. Une variable définie mais
+      # vide suffit à déclencher la signature côté Tauri, qui échoue alors sur
+      # « failed to import keychain certificate ».
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Signature des mises à jour (à configurer dans les secrets du dépôt).
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          # Signature et notarisation macOS (optionnelles tant qu'absentes).
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
