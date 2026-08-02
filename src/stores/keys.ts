@@ -86,6 +86,34 @@ export const useKeysStore = defineStore("keys", () => {
     }
   }
 
+  /** Charge la clé dans l'agent SSH (mémorise la passphrase). */
+  async function addToAgent(
+    name: string,
+    passphrase: string,
+    configureSsh: boolean,
+  ): Promise<void> {
+    error.value = null;
+    try {
+      await keysRepository.addToAgent(name, passphrase, configureSsh);
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  /** Retire la clé de l'agent SSH. */
+  async function removeFromAgent(name: string): Promise<void> {
+    error.value = null;
+    try {
+      await keysRepository.removeFromAgent(name);
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
   /** Restaure les permissions 600 sur une clé privée. */
   async function fixPermissions(name: string): Promise<void> {
     error.value = null;
@@ -128,5 +156,7 @@ export const useKeysStore = defineStore("keys", () => {
     writeContent,
     changePassphrase,
     fixPermissions,
+    addToAgent,
+    removeFromAgent,
   };
 });

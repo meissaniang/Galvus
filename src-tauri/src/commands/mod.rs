@@ -77,6 +77,30 @@ pub fn key_write_public(name: String, content: String) -> Result<(), AppError> {
     crate::ssh::keys::write_public_key(&name, &content)
 }
 
+/// Charge la clé dans l'agent SSH (et le Trousseau macOS) : la passphrase n'est
+/// alors plus demandée aux connexions suivantes.
+#[tauri::command]
+pub fn key_add_to_agent(
+    name: String,
+    passphrase: String,
+    configure_ssh: bool,
+) -> Result<(), AppError> {
+    let home = dirs::home_dir().ok_or(AppError::HomeDirNotFound)?;
+    let path = home.join(".ssh").join(&name);
+    crate::ssh::agent::add_key(&path, &passphrase)?;
+    if configure_ssh {
+        crate::ssh::agent::ensure_config()?;
+    }
+    Ok(())
+}
+
+/// Retire la clé de l'agent SSH.
+#[tauri::command]
+pub fn key_remove_from_agent(name: String) -> Result<(), AppError> {
+    let home = dirs::home_dir().ok_or(AppError::HomeDirNotFound)?;
+    crate::ssh::agent::remove_key(&home.join(".ssh").join(&name))
+}
+
 /// Restaure les permissions 600 sur une clé privée.
 #[tauri::command]
 pub fn key_fix_permissions(name: String) -> Result<(), AppError> {

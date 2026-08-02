@@ -14,11 +14,17 @@ const props = defineProps<{ open: boolean; keyItem: SshKey | null }>();
 const emit = defineEmits<{
   saveContent: [payload: { name: string; kind: "private" | "public"; content: string }];
   changePassphrase: [payload: { name: string; oldPassphrase: string; newPassphrase: string }];
+  addToAgent: [payload: { name: string; passphrase: string; configureSsh: boolean }];
+  removeFromAgent: [payload: { name: string }];
   close: [];
 }>();
 
-type Tab = "private" | "public" | "passphrase";
+type Tab = "private" | "public" | "passphrase" | "agent";
 const tab = ref<Tab>("private");
+
+// Agent SSH
+const agentPass = ref("");
+const configureSsh = ref(true);
 
 const privateContent = ref("");
 const publicContent = ref("");
@@ -37,6 +43,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "private", label: "Clé privée" },
   { id: "public", label: "Clé publique" },
   { id: "passphrase", label: "Passphrase" },
+  { id: "agent", label: "Agent" },
 ];
 
 watch(
@@ -51,6 +58,8 @@ watch(
     confirmPass.value = "";
     showPass.value = false;
     passSubmitted.value = false;
+    agentPass.value = "";
+    configureSsh.value = true;
 
     loading.value = true;
     try {
@@ -118,6 +127,15 @@ function submitPassphrase(): void {
     newPassphrase: newPass.value,
   });
 }
+
+function submitAgent(): void {
+  if (!props.keyItem) return;
+  emit("addToAgent", {
+    name: props.keyItem.name,
+    passphrase: agentPass.value,
+    configureSsh: configureSsh.value,
+  });
+}
 </script>
 
 <template>
@@ -159,7 +177,7 @@ function submitPassphrase(): void {
         <p v-else-if="loading" class="muted">Lecture de la clé…</p>
 
         <!-- Contenu clé privée / publique -->
-        <template v-else-if="tab !== 'passphrase'">
+        <template v-else-if="tab === 'private' || tab === 'public'">
           <div v-if="tab === 'private'" class="warn">
             <span class="warn__mark">!</span>
             Ne partagez jamais cette clé. Toute modification incorrecte la rendra inutilisable.
@@ -190,6 +208,79 @@ function submitPassphrase(): void {
               <button type="button" class="btn" @click="emit('close')">Fermer</button>
               <button type="button" class="btn btn--primary" @click="saveContent">
                 Enregistrer
+              </button>
+            </div>
+          </footer>
+        </template>
+
+        <!-- Agent SSH / Trousseau -->
+        <template v-else-if="tab === 'agent'">
+          <div class="passbody">
+            <div class="passstate">
+              <span
+                class="passstate__badge"
+                :class="keyItem.inAgent ? 'passstate__badge--on' : 'passstate__badge--off'"
+              >
+                {{ keyItem.inAgent ? "chargée dans l'agent" : "absente de l'agent" }}
+              </span>
+            </div>
+
+            <p class="agentnote">
+              Charger la clé dans l'agent SSH évite de retaper la passphrase à chaque
+              connexion. Sur macOS, elle est mémorisée dans le <strong>Trousseau</strong> et
+              rechargée automatiquement après un redémarrage.
+            </p>
+
+            <template v-if="!keyItem.inAgent">
+              <div v-if="keyItem.encrypted" class="field">
+                <label>Passphrase de la clé</label>
+                <div class="field__pass">
+                  <input
+                    v-model="agentPass"
+                    :type="showPass ? 'text' : 'password'"
+                    class="mono"
+                    placeholder="••••••••"
+                  />
+                  <button type="button" class="field__eye" title="Afficher" @click="showPass = !showPass">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                      <path d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z" stroke="currentColor" stroke-width="1.3" />
+                      <circle cx="8" cy="8" r="1.7" stroke="currentColor" stroke-width="1.3" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <label class="switchrow">
+                <span>
+                  Configurer <code>~/.ssh/config</code>
+                  <span class="switchrow__hint">AddKeysToAgent + UseKeychain</span>
+                </span>
+                <button
+                  type="button"
+                  class="toggle"
+                  :class="{ 'toggle--on': configureSsh }"
+                  role="switch"
+                  :aria-checked="configureSsh"
+                  @click="configureSsh = !configureSsh"
+                ><span class="toggle__knob" /></button>
+              </label>
+            </template>
+          </div>
+
+          <footer class="dialog__foot">
+            <span class="foot__hint">
+              <code>ssh-add --apple-use-keychain</code>
+            </span>
+            <div class="dialog__cta">
+              <button type="button" class="btn" @click="emit('close')">Fermer</button>
+              <button
+                v-if="keyItem.inAgent"
+                type="button"
+                class="btn"
+                @click="emit('removeFromAgent', { name: keyItem.name })"
+              >Retirer de l'agent</button>
+              <button v-else type="button" class="btn btn--primary" @click="submitAgent">
+                Mémoriser la passphrase
               </button>
             </div>
           </footer>
@@ -489,6 +580,66 @@ function submitPassphrase(): void {
   color: var(--g-t3);
   background: var(--g-s2);
   border: 1px dashed var(--g-border-2);
+}
+
+.agentnote {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--g-t2);
+}
+
+.switchrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--g-s0);
+  border: 1px solid var(--g-border);
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--g-t1);
+}
+
+.switchrow code {
+  font-family: var(--g-font-mono);
+  font-size: 11.5px;
+}
+
+.switchrow__hint {
+  display: block;
+  font-size: 11px;
+  color: var(--g-t3);
+  margin-top: 2px;
+}
+
+.toggle {
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--g-s3);
+  display: flex;
+  align-items: center;
+  padding: 0 3px;
+  cursor: pointer;
+  transition: background 0.14s ease;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.toggle--on {
+  background: var(--g-accent);
+  justify-content: flex-end;
+}
+
+.toggle__knob {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--g-sh1);
 }
 
 .field {

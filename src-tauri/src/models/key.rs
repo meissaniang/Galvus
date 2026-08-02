@@ -24,4 +24,6 @@ pub struct SshKey {
     pub encrypted: bool,
     /// Vrai si la clé privée a des permissions trop ouvertes (ssh la refusera).
     pub insecure_permissions: bool,
+    /// Vrai si la clé est chargée dans l'agent SSH (passphrase déjà déverrouillée).
+    pub in_agent: bool,
 }

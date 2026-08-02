@@ -56,6 +56,16 @@ export const keysRepository = {
     return invoke<void>("key_write_public", { name, content });
   },
 
+  /** Charge la clé dans l'agent SSH (+ Trousseau macOS). */
+  addToAgent(name: string, passphrase: string, configureSsh: boolean): Promise<void> {
+    return invoke<void>("key_add_to_agent", { name, passphrase, configureSsh });
+  },
+
+  /** Retire la clé de l'agent SSH. */
+  removeFromAgent(name: string): Promise<void> {
+    return invoke<void>("key_remove_from_agent", { name });
+  },
+
   /** Restaure les permissions 600 sur la clé privée. */
   fixPermissions(name: string): Promise<void> {
     return invoke<void>("key_fix_permissions", { name });

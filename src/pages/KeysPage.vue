@@ -156,6 +156,32 @@ async function onChangePassphrase(payload: {
   }
 }
 
+async function onAddToAgent(payload: {
+  name: string;
+  passphrase: string;
+  configureSsh: boolean;
+}): Promise<void> {
+  try {
+    await store.addToAgent(payload.name, payload.passphrase, payload.configureSsh);
+    notice.value = `Passphrase de « ${payload.name} » mémorisée (agent + Trousseau)`;
+    setTimeout(() => (notice.value = null), 3000);
+    editOpen.value = false;
+  } catch {
+    /* erreur affichée via store.error */
+  }
+}
+
+async function onRemoveFromAgent(payload: { name: string }): Promise<void> {
+  try {
+    await store.removeFromAgent(payload.name);
+    notice.value = `« ${payload.name} » retirée de l'agent`;
+    setTimeout(() => (notice.value = null), 2500);
+    editOpen.value = false;
+  } catch {
+    /* erreur affichée via store.error */
+  }
+}
+
 onMounted(() => {
   if (keys.value.length === 0) store.load();
 });
@@ -230,6 +256,8 @@ onMounted(() => {
       :key-item="editingKey"
       @save-content="onSaveContent"
       @change-passphrase="onChangePassphrase"
+      @add-to-agent="onAddToAgent"
+      @remove-from-agent="onRemoveFromAgent"
       @close="editOpen = false"
     />
 

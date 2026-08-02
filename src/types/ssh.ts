@@ -87,4 +87,6 @@ export interface SshKey {
   encrypted: boolean;
   /** Vrai si les permissions de la clé privée sont trop ouvertes (ssh la refuse). */
   insecurePermissions: boolean;
+  /** Vrai si la clé est chargée dans l'agent SSH (passphrase déjà déverrouillée). */
+  inAgent: boolean;
 }

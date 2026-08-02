@@ -95,6 +95,9 @@ async function copyFingerprint(): Promise<void> {
       </span>
       <span v-else class="kbadge kbadge--missing">privée manquante</span>
       <span class="kbadge kbadge--info"><span class="kbadge__dot" />publique</span>
+      <span v-if="keyItem.inAgent" class="kbadge kbadge--agent" title="Passphrase mémorisée dans l'agent SSH">
+        <span class="kbadge__dot" />agent
+      </span>
 
       <template v-if="keyItem.insecurePermissions">
         <span class="kbadge kbadge--danger" title="ssh refusera d'utiliser cette clé">
@@ -319,6 +322,11 @@ async function copyFingerprint(): Promise<void> {
   color: var(--g-t3);
   background: var(--g-s2);
   border: 1px dashed var(--g-border-2);
+}
+
+.kbadge--agent {
+  color: var(--g-accent);
+  background: var(--g-accent-soft);
 }
 
 .kbadge--danger {

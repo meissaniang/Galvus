@@ -61,6 +61,8 @@ pub fn run() {
             commands::key_write_public,
             commands::key_change_passphrase,
             commands::key_fix_permissions,
+            commands::key_add_to_agent,
+            commands::key_remove_from_agent,
             commands::server_list,
             commands::server_create,
             commands::server_update,

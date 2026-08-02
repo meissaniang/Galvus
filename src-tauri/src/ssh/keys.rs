@@ -362,6 +362,14 @@ pub fn list_keys() -> Result<Vec<SshKey>, AppError> {
         }
     }
 
+    // Une seule interrogation de l'agent pour l'ensemble des clés.
+    let loaded = crate::ssh::agent::loaded_fingerprints();
+    for key in &mut keys {
+        if let Some(fp) = &key.fingerprint {
+            key.in_agent = loaded.contains(fp);
+        }
+    }
+
     keys.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(keys)
 }
@@ -421,5 +429,7 @@ fn inspect_key(pub_path: &Path) -> Option<SshKey> {
         has_private,
         encrypted,
         insecure_permissions,
+        // Renseigné par `list_keys`, qui interroge l'agent une seule fois.
+        in_agent: false,
     })
 }
