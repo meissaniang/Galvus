@@ -82,7 +82,7 @@ const previewStyle = computed(() => ({
       <div class="subnav__spacer" />
       <div class="subnav__version">
         <div class="subnav__vname">Galvus 0.1.0</div>
-        <div class="subnav__vsub">Créé par Sofratech</div>
+        <div class="subnav__vsub">100 % local</div>
       </div>
     </aside>
 
