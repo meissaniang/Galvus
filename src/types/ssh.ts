@@ -40,6 +40,16 @@ export interface ServerInput {
   group: string | null;
 }
 
+/** Champs éditables d'une entrée Host du ~/.ssh/config. */
+export interface ConfigHostInput {
+  alias: string;
+  hostname: string | null;
+  user: string | null;
+  port: number | null;
+  identityFile: string | null;
+  proxyJump: string | null;
+}
+
 /** Type de tunnel SSH. */
 export type TunnelKind = "local" | "remote" | "dynamic";
 

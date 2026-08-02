@@ -9,7 +9,8 @@ import { useSettingsStore } from "@/stores/settings";
 import HostCard from "@/components/HostCard.vue";
 import ServerCard from "@/components/ServerCard.vue";
 import ServerFormDialog from "@/components/ServerFormDialog.vue";
-import type { Host, Server, ServerInput } from "@/types/ssh";
+import ConfigHostDialog from "@/components/ConfigHostDialog.vue";
+import type { ConfigHostInput, Host, Server, ServerInput } from "@/types/ssh";
 
 /**
  * Écran Serveurs — implémentation fidèle de « ScreenServers.dc.html » :
@@ -76,9 +77,17 @@ const groupNames = computed(() =>
   [...new Set(servers.value.map((s) => s.group).filter((g): g is string => Boolean(g)))].sort(),
 );
 
-const filteredHosts = computed(() =>
-  hosts.value.filter((h) => match([h.alias, h.hostname, h.user])),
-);
+/** Hôtes du config : filtrés puis triés selon le même critère. */
+const filteredHosts = computed<Host[]>(() => {
+  const list = hosts.value.filter((h) => match([h.alias, h.hostname, h.user]));
+  const sorted = [...list];
+  if (serversSort.value === "recent") {
+    sorted.reverse();
+  } else {
+    sorted.sort((a, b) => a.alias.localeCompare(b.alias));
+  }
+  return sorted;
+});
 
 /** Libellés des sessions ouvertes → point vert « connecté » sur les cartes. */
 const connectedLabels = computed(
@@ -149,6 +158,31 @@ async function toggleFavorite(server: Server): Promise<void> {
   await myServers.update(server.id, { ...toInput(server), favorite: !server.favorite });
 }
 
+// --- Édition des hôtes ~/.ssh/config ---
+const hostDialogOpen = ref(false);
+const editingHost = ref<Host | null>(null);
+
+function openEditHost(host: Host): void {
+  editingHost.value = host;
+  hostDialogOpen.value = true;
+}
+
+async function onSaveHost(input: ConfigHostInput): Promise<void> {
+  if (!editingHost.value) return;
+  try {
+    await hostsStore.update(editingHost.value.alias, input);
+    hostDialogOpen.value = false;
+  } catch {
+    /* erreur affichée via hostsError */
+  }
+}
+
+async function onRemoveHost(host: Host): Promise<void> {
+  if (window.confirm(`Supprimer « ${host.alias} » de ~/.ssh/config ?`)) {
+    await hostsStore.remove(host.alias);
+  }
+}
+
 /** ⌘K / Ctrl+K : focus sur la recherche. */
 function onKeydown(event: KeyboardEvent): void {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -176,7 +210,7 @@ function addressOf(server: Server): string {
 <template>
   <section class="screen">
     <!-- Topbar 56px -->
-    <div class="topbar" data-tauri-drag-region>
+    <div class="topbar" data-galvus-drag>
       <div class="search">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
           <circle cx="7" cy="7" r="4.4" stroke="currentColor" stroke-width="1.5" />
@@ -352,6 +386,8 @@ function addressOf(server: Server): string {
             :host="host"
             :connected="connectedLabels.has(host.alias)"
             @click="connectHost(host)"
+            @edit="openEditHost"
+            @remove="onRemoveHost"
           />
         </div>
       </section>
@@ -377,6 +413,13 @@ function addressOf(server: Server): string {
       :default-group="dialogGroup"
       @save="onSave"
       @close="dialogOpen = false"
+    />
+
+    <ConfigHostDialog
+      :open="hostDialogOpen"
+      :host="editingHost"
+      @save="onSaveHost"
+      @close="hostDialogOpen = false"
     />
   </section>
 </template>

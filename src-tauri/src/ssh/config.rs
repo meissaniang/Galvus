@@ -105,6 +105,139 @@ fn resolve_host(alias: &str) -> Host {
     host
 }
 
+/// Vrai si la ligne ouvre un nouveau bloc (`Host` ou `Match`).
+fn is_block_start(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    let keyword = trimmed.split_whitespace().next().unwrap_or("");
+    keyword.eq_ignore_ascii_case("host") || keyword.eq_ignore_ascii_case("match")
+}
+
+/// Vrai si la ligne est le `Host` déclarant exactement cet alias.
+fn is_host_line_for(line: &str, alias: &str) -> bool {
+    let trimmed = line.trim();
+    let mut parts = trimmed.split_whitespace();
+    match parts.next() {
+        Some(k) if k.eq_ignore_ascii_case("host") => parts.any(|p| p == alias),
+        _ => false,
+    }
+}
+
+/// Rend le bloc `Host` correspondant aux champs fournis.
+fn render_block(input: &crate::models::ConfigHostInput) -> Vec<String> {
+    fn push(lines: &mut Vec<String>, key: &str, value: &str) {
+        let value = value.trim();
+        if !value.is_empty() {
+            lines.push(format!("    {key} {value}"));
+        }
+    }
+
+    let mut lines = vec![format!("Host {}", input.alias.trim())];
+    if let Some(v) = &input.hostname {
+        push(&mut lines, "HostName", v);
+    }
+    if let Some(v) = &input.user {
+        push(&mut lines, "User", v);
+    }
+    if let Some(p) = input.port {
+        if p != 22 {
+            lines.push(format!("    Port {p}"));
+        }
+    }
+    if let Some(v) = &input.identity_file {
+        push(&mut lines, "IdentityFile", v);
+    }
+    if let Some(v) = &input.proxy_jump {
+        push(&mut lines, "ProxyJump", v);
+    }
+    lines
+}
+
+/// Réécrit le fichier de config après sauvegarde en `config.bak`.
+fn write_config(path: &std::path::Path, lines: &[String]) -> Result<(), AppError> {
+    if path.exists() {
+        let _ = std::fs::copy(path, path.with_extension("bak"));
+    }
+    let mut content = lines.join("\n");
+    if !content.ends_with('\n') {
+        content.push('\n');
+    }
+    std::fs::write(path, content)?;
+    Ok(())
+}
+
+/// Met à jour (ou renomme) une entrée `Host` du `~/.ssh/config`.
+///
+/// Le bloc existant est remplacé intégralement par les champs fournis ; le reste
+/// du fichier (commentaires, autres hôtes, Include) est préservé tel quel.
+pub fn update_host(alias: &str, input: &crate::models::ConfigHostInput) -> Result<(), AppError> {
+    if input.alias.trim().is_empty() || input.alias.split_whitespace().count() != 1 {
+        return Err(AppError::Command("alias invalide".into()));
+    }
+
+    let path = config_path()?;
+    let content = std::fs::read_to_string(&path)?;
+
+    let mut out: Vec<String> = Vec::new();
+    let mut found = false;
+    let mut skipping = false;
+
+    for line in content.lines() {
+        if skipping {
+            // On saute les options du bloc jusqu'au prochain Host/Match.
+            if is_block_start(line) {
+                skipping = false;
+            } else {
+                continue;
+            }
+        }
+        if !found && is_host_line_for(line, alias) {
+            out.extend(render_block(input));
+            found = true;
+            skipping = true;
+            continue;
+        }
+        out.push(line.to_string());
+    }
+
+    if !found {
+        return Err(AppError::Command(format!("hôte « {alias} » introuvable")));
+    }
+
+    write_config(&path, &out)
+}
+
+/// Supprime une entrée `Host` du `~/.ssh/config`.
+pub fn delete_host(alias: &str) -> Result<(), AppError> {
+    let path = config_path()?;
+    let content = std::fs::read_to_string(&path)?;
+
+    let mut out: Vec<String> = Vec::new();
+    let mut found = false;
+    let mut skipping = false;
+
+    for line in content.lines() {
+        if skipping {
+            if is_block_start(line) {
+                skipping = false;
+            } else {
+                continue;
+            }
+        }
+        if !found && is_host_line_for(line, alias) {
+            found = true;
+            skipping = true;
+            continue;
+        }
+        out.push(line.to_string());
+    }
+
+    if !found {
+        return Err(AppError::Command(format!("hôte « {alias} » introuvable")));
+    }
+
+    write_config(&path, &out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::parse_host_aliases;

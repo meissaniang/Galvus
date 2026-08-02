@@ -1,7 +1,7 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import { hostsRepository } from "@/repositories/hostsRepository";
-import type { Host } from "@/types/ssh";
+import type { ConfigHostInput, Host } from "@/types/ssh";
 
 export const useServersStore = defineStore("servers", () => {
   const hosts = ref<Host[]>([]);
@@ -34,5 +34,29 @@ export const useServersStore = defineStore("servers", () => {
     }
   }
 
-  return { hosts, loading, error, query, filteredHosts, load };
+  /** Met à jour une entrée du ~/.ssh/config puis recharge la liste. */
+  async function update(alias: string, input: ConfigHostInput): Promise<void> {
+    error.value = null;
+    try {
+      await hostsRepository.update(alias, input);
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  /** Supprime une entrée du ~/.ssh/config puis recharge la liste. */
+  async function remove(alias: string): Promise<void> {
+    error.value = null;
+    try {
+      await hostsRepository.remove(alias);
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  return { hosts, loading, error, query, filteredHosts, load, update, remove };
 });

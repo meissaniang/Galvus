@@ -1,6 +1,6 @@
 //! Modèle d'un hôte SSH, tel que résolu depuis `~/.ssh/config` via `ssh -G`.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Un hôte SSH configuré (une entrée `Host` du fichier de config).
 ///
@@ -20,5 +20,18 @@ pub struct Host {
     /// Première `IdentityFile` résolue.
     pub identity_file: Option<String>,
     /// Bastion (`ProxyJump`), si défini.
+    pub proxy_jump: Option<String>,
+}
+
+/// Champs éditables d'une entrée `Host` du fichier `~/.ssh/config`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfigHostInput {
+    /// Nouvel alias (permet de renommer l'entrée).
+    pub alias: String,
+    pub hostname: Option<String>,
+    pub user: Option<String>,
+    pub port: Option<u16>,
+    pub identity_file: Option<String>,
     pub proxy_jump: Option<String>,
 }

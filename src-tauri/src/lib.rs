@@ -49,6 +49,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::list_hosts,
+            commands::config_host_update,
+            commands::config_host_delete,
             commands::list_keys,
             commands::key_generate,
             commands::key_import,

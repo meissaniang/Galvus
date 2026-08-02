@@ -54,16 +54,25 @@ function onKeydown(event: KeyboardEvent): void {
 }
 
 /**
- * Déplacement de la fenêtre (barre de titre Overlay) : tout mousedown dans une
- * zone marquée `data-tauri-drag-region` — hors contrôle interactif — démarre
- * le drag natif. Double-clic : agrandir/restaurer, comme une barre de titre.
+ * Déplacement de la fenêtre (barre de titre Overlay).
+ *
+ * On n'utilise PAS `data-tauri-drag-region` sur les barres contenant des
+ * contrôles : l'attribut natif capte le mousedown et empêche les champs, selects
+ * et boutons de réagir. À la place, les zones portent `data-galvus-drag` et ce
+ * handler démarre le drag seulement si le clic ne vise pas un élément interactif.
  */
 function onDragRegion(event: MouseEvent): void {
   if (event.button !== 0) return;
   const target = event.target as HTMLElement | null;
   if (!target) return;
-  if (target.closest("button, input, select, textarea, a, [role='switch']")) return;
-  if (!target.closest("[data-tauri-drag-region]")) return;
+  if (
+    target.closest(
+      "button, input, select, textarea, a, label, [role='switch'], [contenteditable]",
+    )
+  ) {
+    return;
+  }
+  if (!target.closest("[data-galvus-drag]")) return;
   const win = getCurrentWindow();
   if (event.detail === 2) {
     void win.toggleMaximize();
@@ -94,7 +103,7 @@ onBeforeUnmount(() => {
       <!-- Zone des feux macOS (fenêtre en titleBarStyle Overlay) + drag. -->
       <div class="sb__traffic" data-tauri-drag-region></div>
 
-      <div class="sb__brand" data-tauri-drag-region>
+      <div class="sb__brand" data-galvus-drag>
         <div class="sb__logo">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <rect x="2.5" y="2.5" width="11" height="11" rx="3" stroke="var(--g-accent-fg)" stroke-width="1.6" />

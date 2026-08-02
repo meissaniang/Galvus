@@ -63,7 +63,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 <template>
   <section class="workspace">
     <!-- Barre d'onglets -->
-    <div class="tabsbar" data-tauri-drag-region>
+    <div class="tabsbar" data-galvus-drag>
       <div
         v-for="tab in tabs"
         :key="tab.id"

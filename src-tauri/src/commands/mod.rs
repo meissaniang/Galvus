@@ -2,7 +2,7 @@
 
 use crate::database::{servers_repository, tunnels_repository, Database};
 use crate::errors::AppError;
-use crate::models::{Host, Server, ServerInput, SshKey, Tunnel, TunnelInput};
+use crate::models::{ConfigHostInput, Host, Server, ServerInput, SshKey, Tunnel, TunnelInput};
 use crate::services::terminal::TerminalManager;
 use crate::services::tunnels::TunnelManager;
 
@@ -10,6 +10,18 @@ use crate::services::tunnels::TunnelManager;
 #[tauri::command]
 pub fn list_hosts() -> Result<Vec<Host>, AppError> {
     crate::ssh::config::list_hosts()
+}
+
+/// Met à jour (ou renomme) une entrée du `~/.ssh/config`.
+#[tauri::command]
+pub fn config_host_update(alias: String, input: ConfigHostInput) -> Result<(), AppError> {
+    crate::ssh::config::update_host(&alias, &input)
+}
+
+/// Supprime une entrée du `~/.ssh/config`.
+#[tauri::command]
+pub fn config_host_delete(alias: String) -> Result<(), AppError> {
+    crate::ssh::config::delete_host(&alias)
 }
 
 /// Liste les clés SSH détectées dans `~/.ssh`.

@@ -141,7 +141,7 @@ onMounted(() => {
 <template>
   <section class="screen">
     <!-- Topbar -->
-    <div class="topbar" data-tauri-drag-region>
+    <div class="topbar" data-galvus-drag>
       <div class="topbar__titles">
         <div class="topbar__title">Tunnels</div>
         <div class="topbar__sub">{{ subtitle }}</div>

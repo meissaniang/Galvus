@@ -1,12 +1,22 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Host } from "@/types/ssh";
+import type { ConfigHostInput, Host } from "@/types/ssh";
 
 /**
- * Accès aux hôtes SSH. Unique point d'appel de la commande Tauri `list_hosts`
- * (aucun composant n'appelle `invoke` directement).
+ * Accès aux hôtes SSH du `~/.ssh/config`. Unique point d'appel des commandes
+ * Tauri correspondantes (aucun composant n'appelle `invoke` directement).
  */
 export const hostsRepository = {
   list(): Promise<Host[]> {
     return invoke<Host[]>("list_hosts");
+  },
+
+  /** Met à jour (ou renomme) une entrée du fichier de config. */
+  update(alias: string, input: ConfigHostInput): Promise<void> {
+    return invoke<void>("config_host_update", { alias, input });
+  },
+
+  /** Supprime une entrée du fichier de config. */
+  remove(alias: string): Promise<void> {
+    return invoke<void>("config_host_delete", { alias });
   },
 };
