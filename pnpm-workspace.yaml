@@ -8,3 +8,9 @@ packages:
 # pnpm >= 11 bloque par défaut les scripts postinstall non approuvés.
 allowBuilds:
   esbuild: true
+
+# Une seule version de TypeScript dans tout l'arbre. Sans cela, l'installation
+# automatique des peer dependencies peut tirer TypeScript 7, que typescript-eslint
+# ne prend pas encore en charge (typescript-eslint#10940).
+overrides:
+  typescript: 5.6.3
