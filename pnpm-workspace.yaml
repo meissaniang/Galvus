@@ -1,3 +1,9 @@
+# Projet à paquet unique. Le champ `packages` est obligatoire dès lors que ce
+# fichier existe, sans quoi pnpm refuse toute commande de workspace
+# (« packages field missing or empty »).
+packages:
+  - "."
+
 # Autorise l'exécution du build-script d'esbuild (binaire natif requis par Vite).
 # pnpm >= 11 bloque par défaut les scripts postinstall non approuvés.
 allowBuilds:
