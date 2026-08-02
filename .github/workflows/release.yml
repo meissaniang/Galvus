@@ -175,6 +175,9 @@ jobs:
           node -e 'JSON.parse(process.env.PATHS).forEach((p) => console.log(p))' \
             > paths.txt
           while IFS= read -r path; do
+            # Sur Windows les chemins arrivent avec des antislashs : on les
+            # normalise, sinon le nom de base ne peut pas être isolé.
+            path="${path//\\//}"
             # Les bundles .app sont des dossiers : seuls les fichiers sont publiés.
             [ -f "$path" ] || continue
             base="${path##*/}"
