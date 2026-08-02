@@ -38,10 +38,10 @@ jobs:
 
           | Plateforme | Fichier |
           | --- | --- |
-          | macOS (Apple Silicon) | `Galvus_*_aarch64.dmg` |
-          | macOS (Intel) | `Galvus_*_x64.dmg` |
-          | Windows | `Galvus_*_x64-setup.exe` ou `Galvus_*_x64_en-US.msi` |
-          | Linux | `Galvus_*_amd64.AppImage`, `.deb` ou `.rpm` |
+          | macOS (Apple Silicon) | `Galvus_*_aarch64-macos.dmg` |
+          | macOS (Intel) | `Galvus_*_x64-macos.dmg` |
+          | Windows | `Galvus_*_x64-setup-windows.exe` ou `Galvus_*_x64_en-US-windows.msi` |
+          | Linux | `Galvus_*_amd64-linux.AppImage`, `-linux.deb` ou `-linux.rpm` |
 
           Les binaires ne sont pas signés : macOS demande un clic droit → **Ouvrir**
           au premier lancement, Windows affiche un avertissement SmartScreen.
@@ -98,15 +98,19 @@ jobs:
           - platform: macos-latest
             target: aarch64-apple-darwin
             args: "--target aarch64-apple-darwin"
+            suffix: macos
           - platform: macos-latest
             target: x86_64-apple-darwin
             args: "--target x86_64-apple-darwin"
+            suffix: macos
           - platform: ubuntu-22.04
             target: ""
             args: ""
+            suffix: linux
           - platform: windows-latest
             target: ""
             args: ""
+            suffix: windows
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -147,12 +151,42 @@ jobs:
       # qu'une fois les secrets réellement renseignés. Une variable définie mais
       # vide suffit à déclencher la signature côté Tauri, qui échoue alors sur
       # « failed to import keychain certificate ».
+      # Compile sans téléverser : les fichiers sont d'abord renommés ci-dessous.
       - uses: tauri-apps/tauri-action@v0
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
+
+      # Tauri ne permet pas de personnaliser le nom des bundles : on suffixe donc
+      # chaque fichier par son système avant de l'attacher à la release.
+      - name: Renommer et téléverser les installeurs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUFFIX: ${{ matrix.suffix }}
+          PATHS: ${{ steps.tauri.outputs.artifactPaths }}
+        run: |
+          set -euo pipefail
+          mkdir -p upload
+
+          # artifactPaths est un tableau JSON ; Node est déjà installé sur le runner.
+          node -e 'JSON.parse(process.env.PATHS).forEach((p) => console.log(p))' \
+            > paths.txt
+          while IFS= read -r path; do
+            # Les bundles .app sont des dossiers : seuls les fichiers sont publiés.
+            [ -f "$path" ] || continue
+            base="${path##*/}"
+            case "$base" in
+              *.tar.gz) name="${base%.tar.gz}"; ext="tar.gz" ;;
+              *)        name="${base%.*}";      ext="${base##*.}" ;;
+            esac
+            cp "$path" "upload/${name}-${SUFFIX}.${ext}"
+          done < paths.txt
+
+          ls -1 upload
+          gh release upload "$GITHUB_REF_NAME" upload/* --clobber
 
   # 3. Publie la release une fois tous les assets téléversés.
   publish:

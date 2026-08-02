@@ -46,14 +46,14 @@ réimplémente pas le protocole SSH. Les métadonnées sont stockées dans une b
 Rendez-vous sur la page [Releases](https://github.com/meissaniang/Galvus/releases/latest)
 et choisissez le fichier correspondant à votre machine.
 
-| Plateforme            | Fichier à télécharger                           |
-| --------------------- | ----------------------------------------------- |
-| macOS (Apple Silicon) | `Galvus_<version>_aarch64.dmg`                  |
-| macOS (Intel)         | `Galvus_<version>_x64.dmg`                      |
-| Windows               | `Galvus_<version>_x64-setup.exe` (ou le `.msi`) |
-| Linux (Debian/Ubuntu) | `Galvus_<version>_amd64.deb`                    |
-| Linux (Fedora/RHEL)   | `Galvus-<version>-1.x86_64.rpm`                 |
-| Linux (universel)     | `Galvus_<version>_amd64.AppImage`               |
+| Plateforme            | Fichier à télécharger                                   |
+| --------------------- | ------------------------------------------------------- |
+| macOS (Apple Silicon) | `Galvus_<version>_aarch64-macos.dmg`                    |
+| macOS (Intel)         | `Galvus_<version>_x64-macos.dmg`                        |
+| Windows               | `Galvus_<version>_x64-setup-windows.exe` (ou le `.msi`) |
+| Linux (Debian/Ubuntu) | `Galvus_<version>_amd64-linux.deb`                      |
+| Linux (Fedora/RHEL)   | `Galvus-<version>-1.x86_64-linux.rpm`                   |
+| Linux (universel)     | `Galvus_<version>_amd64-linux.AppImage`                 |
 
 > **Binaires non signés.** Au premier lancement, macOS exige un clic droit sur
 > l'application → **Ouvrir**, et Windows affiche un avertissement SmartScreen
