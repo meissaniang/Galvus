@@ -6,8 +6,8 @@
 
 **Client SSH desktop moderne, open source et 100 % local.**
 
-[![CI](https://github.com/meissaniang/galvus/actions/workflows/ci.yml/badge.svg)](https://github.com/meissaniang/galvus/actions/workflows/ci.yml)
-[![Release](https://github.com/meissaniang/galvus/actions/workflows/release.yml/badge.svg)](https://github.com/meissaniang/galvus/actions/workflows/release.yml)
+[![CI](https://github.com/meissaniang/Galvus/actions/workflows/ci.yml/badge.svg)](https://github.com/meissaniang/Galvus/actions/workflows/ci.yml)
+[![Release](https://github.com/meissaniang/Galvus/actions/workflows/release.yml/badge.svg)](https://github.com/meissaniang/Galvus/actions/workflows/release.yml)
 [![Licence MIT](https://img.shields.io/badge/licence-MIT-23C48A)](LICENSE)
 [![Tauri v2](https://img.shields.io/badge/Tauri-v2-24C8DB)](https://tauri.app)
 
@@ -41,7 +41,7 @@ réimplémente pas le protocole SSH. Les métadonnées sont stockées dans une b
 ## Installation
 
 Téléchargez la dernière version depuis la page
-[Releases](https://github.com/meissaniang/galvus/releases) :
+[Releases](https://github.com/meissaniang/Galvus/releases) :
 
 | Plateforme | Fichier                       |
 | ---------- | ----------------------------- |
@@ -62,7 +62,7 @@ Il vous faut [Node.js](https://nodejs.org) 20+, [pnpm](https://pnpm.io) et
 [dépendances système de Tauri](https://tauri.app/start/prerequisites/).
 
 ```bash
-git clone https://github.com/meissaniang/galvus.git
+git clone https://github.com/meissaniang/Galvus.git
 cd galvus
 pnpm install
 pnpm tauri dev

@@ -6,7 +6,7 @@ Merci de votre intérêt ! Ce document décrit comment proposer une modification
 
 - **Bug ou petite correction** : ouvrez directement une pull request.
 - **Nouvelle fonctionnalité** : ouvrez d'abord une
-  [issue](https://github.com/meissaniang/galvus/issues) pour en discuter. Cela
+  [issue](https://github.com/meissaniang/Galvus/issues) pour en discuter. Cela
   évite de développer quelque chose qui ne rentrerait pas dans le périmètre.
 - **Vulnérabilité de sécurité** : ne passez pas par une issue publique, suivez
   [SECURITY.md](SECURITY.md).

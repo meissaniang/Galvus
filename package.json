@@ -54,10 +54,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/meissaniang/galvus.git"
+    "url": "https://github.com/meissaniang/Galvus.git"
   },
-  "homepage": "https://github.com/meissaniang/galvus",
+  "homepage": "https://github.com/meissaniang/Galvus",
   "bugs": {
-    "url": "https://github.com/meissaniang/galvus/issues"
+    "url": "https://github.com/meissaniang/Galvus/issues"
   }
 }

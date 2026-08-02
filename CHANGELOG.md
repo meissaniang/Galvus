@@ -28,5 +28,5 @@ Première version publique.
 - **Journalisation** avec rotation des fichiers.
 - Interfaces de synchronisation (phase 2), sans implémentation réseau.
 
-[Non publié]: https://github.com/meissaniang/galvus/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/meissaniang/galvus/releases/tag/v0.1.0
+[Non publié]: https://github.com/meissaniang/Galvus/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/meissaniang/Galvus/releases/tag/v0.1.0

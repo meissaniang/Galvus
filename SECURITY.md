@@ -7,7 +7,7 @@ priorité du projet.
 
 **N'ouvrez pas d'issue publique.**
 
-Utilisez l'onglet [Security → Report a vulnerability](https://github.com/meissaniang/galvus/security/advisories/new)
+Utilisez l'onglet [Security → Report a vulnerability](https://github.com/meissaniang/Galvus/security/advisories/new)
 du dépôt, qui crée un signalement privé.
 
 Merci d'inclure une description du problème, les étapes pour le reproduire, la
