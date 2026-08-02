@@ -152,7 +152,7 @@ jobs:
       # vide suffit à déclencher la signature côté Tauri, qui échoue alors sur
       # « failed to import keychain certificate ».
       # Compile sans téléverser : les fichiers sont d'abord renommés ci-dessous.
-      - uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v1
         id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
