@@ -83,4 +83,8 @@ export interface SshKey {
   fingerprint: string | null;
   comment: string | null;
   hasPrivate: boolean;
+  /** Vrai si la clé privée est protégée par une passphrase. */
+  encrypted: boolean;
+  /** Vrai si les permissions de la clé privée sont trop ouvertes (ssh la refuse). */
+  insecurePermissions: boolean;
 }

@@ -147,6 +147,155 @@ pub fn read_private_key(name: &str) -> Result<String, AppError> {
     Ok(std::fs::read_to_string(path)?)
 }
 
+/// Indique si la clé privée est protégée par une passphrase.
+///
+/// L'analyse porte sur le fichier lui-même (et non sur `ssh-keygen`, qui refuse
+/// de lire une clé aux permissions trop ouvertes et fausserait le résultat) :
+/// - format OpenSSH : le champ `ciphername` de l'en-tête vaut `none` si la clé
+///   est en clair ;
+/// - formats PEM historiques : marqueurs `Proc-Type: 4,ENCRYPTED` / PKCS#8.
+fn is_encrypted(private_path: &Path) -> bool {
+    use base64::Engine as _;
+
+    let Ok(content) = std::fs::read_to_string(private_path) else {
+        return false;
+    };
+
+    if content.contains("Proc-Type: 4,ENCRYPTED") || content.contains("BEGIN ENCRYPTED PRIVATE KEY")
+    {
+        return true;
+    }
+
+    if !content.contains("BEGIN OPENSSH PRIVATE KEY") {
+        return false;
+    }
+
+    let body: String = content
+        .lines()
+        .filter(|l| !l.starts_with("-----"))
+        .collect::<Vec<_>>()
+        .join("");
+    let Ok(bytes) = base64::engine::general_purpose::STANDARD.decode(body.trim()) else {
+        return false;
+    };
+
+    const MAGIC: &[u8] = b"openssh-key-v1\0";
+    let Some(rest) = bytes.strip_prefix(MAGIC) else {
+        return false;
+    };
+    if rest.len() < 4 {
+        return false;
+    }
+    let len = u32::from_be_bytes([rest[0], rest[1], rest[2], rest[3]]) as usize;
+    match rest.get(4..4 + len) {
+        Some(cipher) => cipher != b"none",
+        None => false,
+    }
+}
+
+/// Vrai si la clé privée est lisible par d'autres utilisateurs (permissions
+/// trop ouvertes) : `ssh` refuse alors de l'utiliser.
+#[cfg(unix)]
+fn has_insecure_permissions(private_path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::fs::metadata(private_path)
+        .map(|m| m.permissions().mode() & 0o077 != 0)
+        .unwrap_or(false)
+}
+#[cfg(not(unix))]
+fn has_insecure_permissions(_private_path: &Path) -> bool {
+    false
+}
+
+/// Restaure les permissions 600 sur la clé privée.
+pub fn fix_permissions(name: &str) -> Result<(), AppError> {
+    validate_key_name(name)?;
+    let dir = ssh_dir()?;
+    let path = dir.join(name);
+    if !path.is_file() {
+        return Err(AppError::Io(format!("clé privée introuvable : {name}")));
+    }
+    secure_private(&path)
+}
+
+/// Écrit le contenu d'une clé privée (sauvegarde `.bak`, permissions 600).
+pub fn write_private_key(name: &str, content: &str) -> Result<(), AppError> {
+    validate_key_name(name)?;
+    let dir = ssh_dir()?;
+    let path = dir.join(name);
+    if !path.is_file() {
+        return Err(AppError::Io(format!("clé privée introuvable : {name}")));
+    }
+    let _ = std::fs::copy(&path, dir.join(format!("{name}.bak")));
+
+    let mut body = content.trim_end().to_string();
+    body.push('\n');
+    std::fs::write(&path, body)?;
+    secure_private(&path)?;
+    Ok(())
+}
+
+/// Écrit le contenu d'une clé publique (sauvegarde `.bak`).
+pub fn write_public_key(name: &str, content: &str) -> Result<(), AppError> {
+    validate_key_name(name)?;
+    let dir = ssh_dir()?;
+    let path = dir.join(format!("{name}.pub"));
+    if path.is_file() {
+        let _ = std::fs::copy(&path, dir.join(format!("{name}.pub.bak")));
+    }
+
+    let mut body = content.trim_end().to_string();
+    body.push('\n');
+    std::fs::write(&path, body)?;
+    Ok(())
+}
+
+/// Ajoute, change ou retire la passphrase d'une clé privée via `ssh-keygen -p`.
+///
+/// `new_passphrase` vide retire la protection. Une sauvegarde `.bak` est faite
+/// avant l'opération.
+pub fn change_passphrase(
+    name: &str,
+    old_passphrase: &str,
+    new_passphrase: &str,
+) -> Result<SshKey, AppError> {
+    validate_key_name(name)?;
+    let dir = ssh_dir()?;
+    let path = dir.join(name);
+    if !path.is_file() {
+        return Err(AppError::Io(format!("clé privée introuvable : {name}")));
+    }
+    let _ = std::fs::copy(&path, dir.join(format!("{name}.bak")));
+
+    let output = Command::new("ssh-keygen")
+        .arg("-p")
+        .arg("-f")
+        .arg(&path)
+        .arg("-P")
+        .arg(old_passphrase)
+        .arg("-N")
+        .arg(new_passphrase)
+        .output()
+        .map_err(|e| AppError::Command(e.to_string()))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let message = stderr.trim();
+        let friendly = if message.to_lowercase().contains("incorrect passphrase")
+            || message.to_lowercase().contains("load failed")
+        {
+            "passphrase actuelle incorrecte".to_string()
+        } else {
+            message.to_string()
+        };
+        return Err(AppError::Command(friendly));
+    }
+    secure_private(&path)?;
+
+    inspect_key(&dir.join(format!("{name}.pub")))
+        .ok_or_else(|| AppError::Command("clé modifiée mais illisible".into()))
+}
+
 /// Supprime une clé (privée + publique) de `~/.ssh`.
 pub fn delete_key(name: &str) -> Result<(), AppError> {
     validate_key_name(name)?;
@@ -233,7 +382,10 @@ fn inspect_key(pub_path: &Path) -> Option<SshKey> {
         .unwrap_or_default()
         .to_string();
     // Clé privée = même chemin sans l'extension `.pub`.
-    let has_private = pub_path.with_extension("").exists();
+    let private_path = pub_path.with_extension("");
+    let has_private = private_path.exists();
+    let encrypted = has_private && is_encrypted(&private_path);
+    let insecure_permissions = has_private && has_insecure_permissions(&private_path);
 
     Some(SshKey {
         name,
@@ -243,5 +395,7 @@ fn inspect_key(pub_path: &Path) -> Option<SshKey> {
         fingerprint,
         comment,
         has_private,
+        encrypted,
+        insecure_permissions,
     })
 }

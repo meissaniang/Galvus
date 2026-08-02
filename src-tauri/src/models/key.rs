@@ -20,4 +20,8 @@ pub struct SshKey {
     pub comment: Option<String>,
     /// Vrai si la clé privée correspondante existe sur le disque.
     pub has_private: bool,
+    /// Vrai si la clé privée est protégée par une passphrase.
+    pub encrypted: bool,
+    /// Vrai si la clé privée a des permissions trop ouvertes (ssh la refusera).
+    pub insecure_permissions: bool,
 }

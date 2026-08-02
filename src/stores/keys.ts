@@ -66,6 +66,54 @@ export const useKeysStore = defineStore("keys", () => {
     await navigator.clipboard.writeText(content);
   }
 
+  /** Enregistre le contenu modifié d'une clé (privée ou publique). */
+  async function writeContent(
+    name: string,
+    kind: "private" | "public",
+    content: string,
+  ): Promise<void> {
+    error.value = null;
+    try {
+      if (kind === "private") {
+        await keysRepository.writePrivate(name, content);
+      } else {
+        await keysRepository.writePublic(name, content);
+      }
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  /** Restaure les permissions 600 sur une clé privée. */
+  async function fixPermissions(name: string): Promise<void> {
+    error.value = null;
+    try {
+      await keysRepository.fixPermissions(name);
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
+  /** Ajoute, change ou retire la passphrase d'une clé. */
+  async function changePassphrase(
+    name: string,
+    oldPassphrase: string,
+    newPassphrase: string,
+  ): Promise<void> {
+    error.value = null;
+    try {
+      await keysRepository.changePassphrase(name, oldPassphrase, newPassphrase);
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
   return {
     keys,
     loading,
@@ -77,5 +125,8 @@ export const useKeysStore = defineStore("keys", () => {
     importFrom,
     remove,
     copyPublic,
+    writeContent,
+    changePassphrase,
+    fixPermissions,
   };
 });

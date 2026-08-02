@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import { useKeysStore } from "@/stores/keys";
 import { keysRepository } from "@/repositories/keysRepository";
 import KeyCard from "@/components/KeyCard.vue";
+import KeyEditDialog from "@/components/KeyEditDialog.vue";
 import type { SshKey } from "@/types/ssh";
 
 /**
@@ -104,25 +105,55 @@ async function copyPublic(key: SshKey): Promise<void> {
   }
 }
 
-// --- Visualisation de la clé privée (locale uniquement) ---
-const viewKey = ref<{ name: string; content: string } | null>(null);
-const privCopied = ref(false);
-
-async function viewPrivate(key: SshKey): Promise<void> {
+async function fixPermissions(key: SshKey): Promise<void> {
   try {
-    const content = await keysRepository.readPrivate(key.name);
-    privCopied.value = false;
-    viewKey.value = { name: key.name, content };
+    await store.fixPermissions(key.name);
+    notice.value = `Permissions de « ${key.name} » corrigées (600)`;
+    setTimeout(() => (notice.value = null), 2500);
   } catch {
     /* erreur affichée via store.error */
   }
 }
 
-async function copyPrivate(): Promise<void> {
-  if (!viewKey.value) return;
-  await navigator.clipboard.writeText(viewKey.value.content);
-  privCopied.value = true;
-  setTimeout(() => (privCopied.value = false), 1500);
+// --- Édition d'une clé (contenu privé/public + passphrase) ---
+const editOpen = ref(false);
+const editingKey = ref<SshKey | null>(null);
+
+function openEdit(key: SshKey): void {
+  editingKey.value = key;
+  editOpen.value = true;
+}
+
+async function onSaveContent(payload: {
+  name: string;
+  kind: "private" | "public";
+  content: string;
+}): Promise<void> {
+  try {
+    await store.writeContent(payload.name, payload.kind, payload.content);
+    notice.value = `Clé ${payload.kind === "private" ? "privée" : "publique"} « ${payload.name} » enregistrée`;
+    setTimeout(() => (notice.value = null), 2500);
+    editOpen.value = false;
+  } catch {
+    /* erreur affichée via store.error */
+  }
+}
+
+async function onChangePassphrase(payload: {
+  name: string;
+  oldPassphrase: string;
+  newPassphrase: string;
+}): Promise<void> {
+  try {
+    await store.changePassphrase(payload.name, payload.oldPassphrase, payload.newPassphrase);
+    notice.value = payload.newPassphrase
+      ? `Passphrase de « ${payload.name} » mise à jour`
+      : `Passphrase de « ${payload.name} » retirée`;
+    setTimeout(() => (notice.value = null), 2500);
+    editOpen.value = false;
+  } catch {
+    /* erreur affichée via store.error */
+  }
 }
 
 onMounted(() => {
@@ -175,7 +206,8 @@ onMounted(() => {
           :key-item="item"
           @remove="removeKey"
           @copy-public="copyPublic"
-          @view-private="viewPrivate"
+          @view-private="openEdit"
+          @fix-permissions="fixPermissions"
         />
 
         <button class="invite" @click="openGenerate">
@@ -192,44 +224,14 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Dialog clé privée (affichage local) -->
-    <Transition name="dlg">
-      <div v-if="viewKey" class="overlay" @click.self="viewKey = null">
-        <div class="dialog dialog--wide" role="dialog" aria-modal="true">
-          <header class="dialog__head">
-            <div class="dialog__badge">
-              <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                <path d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z" stroke="currentColor" stroke-width="1.3" />
-                <circle cx="8" cy="8" r="1.7" stroke="currentColor" stroke-width="1.3" />
-              </svg>
-            </div>
-            <div class="dialog__titles">
-              <div class="dialog__title">Clé privée — {{ viewKey.name }}</div>
-              <div class="dialog__subtitle">~/.ssh/{{ viewKey.name }} · lecture locale, jamais transmise</div>
-            </div>
-            <button class="dialog__close" title="Fermer" @click="viewKey = null">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
-              </svg>
-            </button>
-          </header>
-
-          <div class="privwarn">
-            <span class="privwarn__mark">!</span>
-            Ne partagez jamais cette clé. Quiconque la possède peut se connecter à vos serveurs.
-          </div>
-
-          <pre class="privkey">{{ viewKey.content }}</pre>
-
-          <footer class="dialog__foot">
-            <button type="button" class="btn" @click="viewKey = null">Fermer</button>
-            <button type="button" class="btn btn--primary" @click="copyPrivate">
-              {{ privCopied ? "Copiée ✓" : "Copier" }}
-            </button>
-          </footer>
-        </div>
-      </div>
-    </Transition>
+    <!-- Dialog d'édition : contenu privé/public + passphrase -->
+    <KeyEditDialog
+      :open="editOpen"
+      :key-item="editingKey"
+      @save-content="onSaveContent"
+      @change-passphrase="onChangePassphrase"
+      @close="editOpen = false"
+    />
 
     <!-- Dialog Générer -->
     <Transition name="dlg">

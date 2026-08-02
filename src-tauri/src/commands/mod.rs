@@ -65,6 +65,34 @@ pub fn key_read_private(name: String) -> Result<String, AppError> {
     crate::ssh::keys::read_private_key(&name)
 }
 
+/// Enregistre le contenu modifié de la clé privée (sauvegarde + permissions 600).
+#[tauri::command]
+pub fn key_write_private(name: String, content: String) -> Result<(), AppError> {
+    crate::ssh::keys::write_private_key(&name, &content)
+}
+
+/// Enregistre le contenu modifié de la clé publique.
+#[tauri::command]
+pub fn key_write_public(name: String, content: String) -> Result<(), AppError> {
+    crate::ssh::keys::write_public_key(&name, &content)
+}
+
+/// Restaure les permissions 600 sur une clé privée.
+#[tauri::command]
+pub fn key_fix_permissions(name: String) -> Result<(), AppError> {
+    crate::ssh::keys::fix_permissions(&name)
+}
+
+/// Ajoute, change ou retire la passphrase d'une clé privée.
+#[tauri::command]
+pub fn key_change_passphrase(
+    name: String,
+    old_passphrase: String,
+    new_passphrase: String,
+) -> Result<SshKey, AppError> {
+    crate::ssh::keys::change_passphrase(&name, &old_passphrase, &new_passphrase)
+}
+
 /// Liste les serveurs enregistrés par l'utilisateur.
 #[tauri::command]
 pub fn server_list(db: tauri::State<'_, Database>) -> Result<Vec<Server>, AppError> {

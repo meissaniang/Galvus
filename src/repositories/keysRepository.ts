@@ -46,6 +46,34 @@ export const keysRepository = {
     return invoke<string>("key_read_private", { name });
   },
 
+  /** Enregistre le contenu modifié de la clé privée. */
+  writePrivate(name: string, content: string): Promise<void> {
+    return invoke<void>("key_write_private", { name, content });
+  },
+
+  /** Enregistre le contenu modifié de la clé publique. */
+  writePublic(name: string, content: string): Promise<void> {
+    return invoke<void>("key_write_public", { name, content });
+  },
+
+  /** Restaure les permissions 600 sur la clé privée. */
+  fixPermissions(name: string): Promise<void> {
+    return invoke<void>("key_fix_permissions", { name });
+  },
+
+  /** Ajoute, change ou retire la passphrase (nouvelle vide = retrait). */
+  changePassphrase(
+    name: string,
+    oldPassphrase: string,
+    newPassphrase: string,
+  ): Promise<SshKey> {
+    return invoke<SshKey>("key_change_passphrase", {
+      name,
+      oldPassphrase,
+      newPassphrase,
+    });
+  },
+
   /** Ouvre le sélecteur de fichier natif pour choisir une clé privée à importer. */
   async pickKeyFile(): Promise<string | null> {
     const selected = await open({

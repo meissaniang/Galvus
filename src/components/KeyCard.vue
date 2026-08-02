@@ -12,6 +12,7 @@ const emit = defineEmits<{
   remove: [key: SshKey];
   copyPublic: [key: SshKey];
   viewPrivate: [key: SshKey];
+  fixPermissions: [key: SshKey];
 }>();
 
 const isEd25519 = computed(() => props.keyItem.keyType?.toUpperCase() === "ED25519");
@@ -52,6 +53,9 @@ async function copyFingerprint(): Promise<void> {
             class="kcard__type"
             :class="isDeprecated ? 'kcard__type--warn' : 'kcard__type--accent'"
           >{{ typeLabel }}</span>
+          <span v-if="keyItem.encrypted" class="kcard__pass" title="Protégée par une passphrase">
+            passphrase
+          </span>
         </div>
         <div v-if="isDeprecated" class="kcard__sub kcard__sub--warn">
           Algorithme déprécié — envisagez une rotation
@@ -59,15 +63,9 @@ async function copyFingerprint(): Promise<void> {
         <div v-else class="kcard__sub">{{ keyItem.comment || keyItem.path }}</div>
       </div>
       <div class="kcard__actions">
-        <button
-          v-if="keyItem.hasPrivate"
-          class="kcard__icon"
-          title="Voir la clé privée"
-          @click="emit('viewPrivate', keyItem)"
-        >
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-            <path d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z" stroke="currentColor" stroke-width="1.3" />
-            <circle cx="8" cy="8" r="1.7" stroke="currentColor" stroke-width="1.3" />
+        <button class="kcard__icon" title="Modifier (contenu, passphrase)" @click="emit('viewPrivate', keyItem)">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
           </svg>
         </button>
         <button class="kcard__icon" title="Copier la clé publique" @click="emit('copyPublic', keyItem)">
@@ -97,6 +95,15 @@ async function copyFingerprint(): Promise<void> {
       </span>
       <span v-else class="kbadge kbadge--missing">privée manquante</span>
       <span class="kbadge kbadge--info"><span class="kbadge__dot" />publique</span>
+
+      <template v-if="keyItem.insecurePermissions">
+        <span class="kbadge kbadge--danger" title="ssh refusera d'utiliser cette clé">
+          permissions trop ouvertes
+        </span>
+        <button class="kcard__fix" @click="emit('fixPermissions', keyItem)">
+          corriger (600)
+        </button>
+      </template>
     </div>
   </article>
 </template>
@@ -180,6 +187,16 @@ async function copyFingerprint(): Promise<void> {
   color: var(--g-warning);
   background: var(--g-s2);
   border: 1px solid var(--g-border);
+}
+
+.kcard__pass {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--g-t3);
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
+  padding: 2px 6px;
+  border-radius: 5px;
 }
 
 .kcard__sub {
@@ -302,5 +319,23 @@ async function copyFingerprint(): Promise<void> {
   color: var(--g-t3);
   background: var(--g-s2);
   border: 1px dashed var(--g-border-2);
+}
+
+.kbadge--danger {
+  color: var(--g-danger);
+  background: var(--g-danger-soft);
+  border: 1px solid var(--g-danger);
+}
+
+.kcard__fix {
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--g-accent);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
 }
 </style>
