@@ -50,7 +50,7 @@ jobs:
           macOS, Linux, Windows 10 1809+ et Windows 11).
           EOF
 
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         id: create
         with:
           script: |
@@ -196,7 +196,7 @@ jobs:
     needs: [create-release, build]
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/github-script@v7
+      - uses: actions/github-script@v9
         with:
           script: |
             await github.rest.repos.updateRelease({
