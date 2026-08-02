@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Outillage local (hors dépôt public)
+.claude/
+CLAUDE.md
