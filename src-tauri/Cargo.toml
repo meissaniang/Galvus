@@ -2,7 +2,10 @@
 name = "galvus"
 version = "0.1.0"
 description = "Galvus — client SSH desktop moderne, open source"
-authors = ["Galvus"]
+authors = ["Meissa Niang"]
+license = "MIT"
+repository = "https://github.com/meissaniang/galvus"
+homepage = "https://github.com/meissaniang/galvus"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

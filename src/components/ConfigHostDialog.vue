@@ -64,17 +64,40 @@ function submit(): void {
         <header class="dialog__head">
           <div class="dialog__badge">
             <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <rect x="2.5" y="2.8" width="13" height="5" rx="1.8" stroke="currentColor" stroke-width="1.5" />
-              <rect x="2.5" y="10.2" width="13" height="5" rx="1.8" stroke="currentColor" stroke-width="1.5" />
+              <rect
+                x="2.5"
+                y="2.8"
+                width="13"
+                height="5"
+                rx="1.8"
+                stroke="currentColor"
+                stroke-width="1.5"
+              />
+              <rect
+                x="2.5"
+                y="10.2"
+                width="13"
+                height="5"
+                rx="1.8"
+                stroke="currentColor"
+                stroke-width="1.5"
+              />
             </svg>
           </div>
           <div class="dialog__titles">
             <div class="dialog__title">Éditer l'hôte — {{ host?.alias }}</div>
-            <div class="dialog__subtitle">Écrit dans ~/.ssh/config · sauvegarde config.bak</div>
+            <div class="dialog__subtitle">
+              Écrit dans ~/.ssh/config · sauvegarde config.bak
+            </div>
           </div>
           <button class="dialog__close" title="Fermer" @click="emit('close')">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <path
+                d="M3 3l6 6M9 3l-6 6"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
             </svg>
           </button>
         </header>
@@ -82,7 +105,12 @@ function submit(): void {
         <form class="dialog__body" @submit.prevent="submit">
           <div class="field field--wide">
             <label>Alias (Host)</label>
-            <input v-model="form.alias" type="text" class="mono" placeholder="vps-meissa-1" />
+            <input
+              v-model="form.alias"
+              type="text"
+              class="mono"
+              placeholder="vps-meissa-1"
+            />
             <span v-if="submitted && !form.alias.trim()" class="field__err">Requis</span>
             <span v-else-if="submitted && form.alias.includes(' ')" class="field__err">
               Un seul mot, sans espace
@@ -91,12 +119,23 @@ function submit(): void {
 
           <div class="field">
             <label>HostName</label>
-            <input v-model="form.hostname" type="text" class="mono" placeholder="145.241.165.236" />
+            <input
+              v-model="form.hostname"
+              type="text"
+              class="mono"
+              placeholder="145.241.165.236"
+            />
           </div>
 
           <div class="field">
             <label>Port</label>
-            <input v-model.number="form.port" type="number" class="mono" min="1" max="65535" />
+            <input
+              v-model.number="form.port"
+              type="number"
+              class="mono"
+              min="1"
+              max="65535"
+            />
           </div>
 
           <div class="field">
@@ -106,14 +145,26 @@ function submit(): void {
 
           <div class="field">
             <label>ProxyJump</label>
-            <input v-model="form.proxyJump" type="text" class="mono" placeholder="bastion" />
+            <input
+              v-model="form.proxyJump"
+              type="text"
+              class="mono"
+              placeholder="bastion"
+            />
           </div>
 
           <div class="field field--wide">
             <label>IdentityFile</label>
             <div class="field__file">
-              <input v-model="form.identityFile" type="text" class="mono" placeholder="~/.ssh/ma-cle" />
-              <button type="button" class="field__browse" @click="browseKey">Parcourir</button>
+              <input
+                v-model="form.identityFile"
+                type="text"
+                class="mono"
+                placeholder="~/.ssh/ma-cle"
+              />
+              <button type="button" class="field__browse" @click="browseKey">
+                Parcourir
+              </button>
             </div>
           </div>
         </form>
@@ -122,13 +173,20 @@ function submit(): void {
           <span class="dialog__privacy">
             <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
               <circle cx="7" cy="7" r="5.4" stroke="currentColor" stroke-width="1.3" />
-              <path d="M7 4.2v.1M7 6.2v3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <path
+                d="M7 4.2v.1M7 6.2v3.4"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
             </svg>
             Le reste du fichier est préservé
           </span>
           <div class="dialog__cta">
             <button type="button" class="btn" @click="emit('close')">Annuler</button>
-            <button type="button" class="btn btn--primary" @click="submit">Enregistrer</button>
+            <button type="button" class="btn btn--primary" @click="submit">
+              Enregistrer
+            </button>
           </div>
         </footer>
       </div>
@@ -163,7 +221,9 @@ function submit(): void {
   transition: opacity 0.12s ease-out;
 }
 .dlg-enter-active .dialog {
-  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.18s ease-out;
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1),
+    opacity 0.18s ease-out;
 }
 .dlg-enter-from {
   opacity: 0;
@@ -269,7 +329,9 @@ function submit(): void {
   outline: none;
   width: 100%;
   box-sizing: border-box;
-  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+  transition:
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
 .field input.mono {

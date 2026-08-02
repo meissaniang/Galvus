@@ -18,8 +18,7 @@ const emit = defineEmits<{
 const isEd25519 = computed(() => props.keyItem.keyType?.toUpperCase() === "ED25519");
 const isDeprecated = computed(
   () =>
-    props.keyItem.keyType?.toUpperCase() === "RSA" &&
-    (props.keyItem.bits ?? 0) <= 2048,
+    props.keyItem.keyType?.toUpperCase() === "RSA" && (props.keyItem.bits ?? 0) <= 2048,
 );
 
 const typeLabel = computed(() => {
@@ -43,7 +42,12 @@ async function copyFingerprint(): Promise<void> {
       <div class="kcard__ava" :class="{ 'kcard__ava--accent': isEd25519 }">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
           <circle cx="6.2" cy="6.2" r="3.4" stroke="currentColor" stroke-width="1.6" />
-          <path d="M8.7 8.7L14.5 14.5M12 13l1.6-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          <path
+            d="M8.7 8.7L14.5 14.5M12 13l1.6-1.6"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          />
         </svg>
       </div>
       <div class="kcard__titles">
@@ -52,8 +56,13 @@ async function copyFingerprint(): Promise<void> {
           <span
             class="kcard__type"
             :class="isDeprecated ? 'kcard__type--warn' : 'kcard__type--accent'"
-          >{{ typeLabel }}</span>
-          <span v-if="keyItem.encrypted" class="kcard__pass" title="Protégée par une passphrase">
+            >{{ typeLabel }}</span
+          >
+          <span
+            v-if="keyItem.encrypted"
+            class="kcard__pass"
+            title="Protégée par une passphrase"
+          >
             passphrase
           </span>
         </div>
@@ -63,20 +72,55 @@ async function copyFingerprint(): Promise<void> {
         <div v-else class="kcard__sub">{{ keyItem.comment || keyItem.path }}</div>
       </div>
       <div class="kcard__actions">
-        <button class="kcard__icon" title="Modifier (contenu, passphrase)" @click="emit('viewPrivate', keyItem)">
+        <button
+          class="kcard__icon"
+          title="Modifier (contenu, passphrase)"
+          @click="emit('viewPrivate', keyItem)"
+        >
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-            <path d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+            <path
+              d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z"
+              stroke="currentColor"
+              stroke-width="1.4"
+              stroke-linejoin="round"
+            />
           </svg>
         </button>
-        <button class="kcard__icon" title="Copier la clé publique" @click="emit('copyPublic', keyItem)">
+        <button
+          class="kcard__icon"
+          title="Copier la clé publique"
+          @click="emit('copyPublic', keyItem)"
+        >
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-            <rect x="2.4" y="2.4" width="6.4" height="6.4" rx="1.6" stroke="currentColor" stroke-width="1.3" />
-            <path d="M5.2 11.6h6.4V5.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+            <rect
+              x="2.4"
+              y="2.4"
+              width="6.4"
+              height="6.4"
+              rx="1.6"
+              stroke="currentColor"
+              stroke-width="1.3"
+            />
+            <path
+              d="M5.2 11.6h6.4V5.2"
+              stroke="currentColor"
+              stroke-width="1.3"
+              stroke-linecap="round"
+            />
           </svg>
         </button>
-        <button class="kcard__icon kcard__icon--danger" title="Supprimer" @click="emit('remove', keyItem)">
+        <button
+          class="kcard__icon kcard__icon--danger"
+          title="Supprimer"
+          @click="emit('remove', keyItem)"
+        >
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-            <path d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+            <path
+              d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4"
+              stroke="currentColor"
+              stroke-width="1.3"
+              stroke-linecap="round"
+            />
           </svg>
         </button>
       </div>
@@ -95,7 +139,11 @@ async function copyFingerprint(): Promise<void> {
       </span>
       <span v-else class="kbadge kbadge--missing">privée manquante</span>
       <span class="kbadge kbadge--info"><span class="kbadge__dot" />publique</span>
-      <span v-if="keyItem.inAgent" class="kbadge kbadge--agent" title="Passphrase mémorisée dans l'agent SSH">
+      <span
+        v-if="keyItem.inAgent"
+        class="kbadge kbadge--agent"
+        title="Passphrase mémorisée dans l'agent SSH"
+      >
         <span class="kbadge__dot" />agent
       </span>
 
@@ -121,7 +169,9 @@ async function copyFingerprint(): Promise<void> {
   flex-direction: column;
   gap: 11px;
   box-shadow: var(--g-sh1);
-  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
 }
 
 .kcard:hover {
@@ -231,7 +281,10 @@ async function copyFingerprint(): Promise<void> {
   justify-content: center;
   color: var(--g-t2);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .kcard__icon:hover {

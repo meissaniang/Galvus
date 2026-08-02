@@ -37,8 +37,14 @@ const ACCENTS: { value: Accent; color: string }[] = [
 ];
 
 const FONTS = [
-  { label: "JetBrains Mono", value: '"JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace' },
-  { label: "SF Mono / système", value: 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace' },
+  {
+    label: "JetBrains Mono",
+    value: '"JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace',
+  },
+  {
+    label: "SF Mono / système",
+    value: 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace',
+  },
   { label: "Menlo", value: "Menlo, monospace" },
   { label: "Courier", value: '"Courier New", Courier, monospace' },
 ];
@@ -79,7 +85,9 @@ const previewStyle = computed(() => ({
         class="subnav__item"
         :class="{ 'subnav__item--on': section === s.id }"
         @click="section = s.id"
-      >{{ s.label }}</button>
+      >
+        {{ s.label }}
+      </button>
       <div class="subnav__spacer" />
       <div class="subnav__version">
         <div class="subnav__vname">Galvus 0.1.0</div>
@@ -98,7 +106,9 @@ const previewStyle = computed(() => ({
 
         <div class="card">
           <div class="card__title">Thème</div>
-          <div class="card__sub">Bascule instantanée, transition des couleurs en 160 ms</div>
+          <div class="card__sub">
+            Bascule instantanée, transition des couleurs en 160 ms
+          </div>
           <div class="themes">
             <button
               v-for="t in THEMES"
@@ -115,7 +125,10 @@ const previewStyle = computed(() => ({
                 <span class="radio" :class="{ 'radio--on': theme.mode === t.value }">
                   <span v-if="theme.mode === t.value" class="radio__dot" />
                 </span>
-                <span class="themecard__label" :class="{ 'themecard__label--on': theme.mode === t.value }">
+                <span
+                  class="themecard__label"
+                  :class="{ 'themecard__label--on': theme.mode === t.value }"
+                >
                   {{ t.label }}
                 </span>
               </span>
@@ -153,7 +166,9 @@ const previewStyle = computed(() => ({
             <div class="field">
               <label>Police</label>
               <select v-model="settings.terminalFontFamily" class="select mono">
-                <option v-for="f in FONTS" :key="f.label" :value="f.value">{{ f.label }}</option>
+                <option v-for="f in FONTS" :key="f.label" :value="f.value">
+                  {{ f.label }}
+                </option>
               </select>
             </div>
 
@@ -196,7 +211,9 @@ const previewStyle = computed(() => ({
                 role="switch"
                 :aria-checked="settings.terminalLigatures"
                 @click="settings.terminalLigatures = !settings.terminalLigatures"
-              ><span class="toggle__knob" /></button>
+              >
+                <span class="toggle__knob" />
+              </button>
             </label>
 
             <label class="switchrow">
@@ -208,7 +225,9 @@ const previewStyle = computed(() => ({
                 role="switch"
                 :aria-checked="settings.terminalCursorBlink"
                 @click="settings.terminalCursorBlink = !settings.terminalCursorBlink"
-              ><span class="toggle__knob" /></button>
+              >
+                <span class="toggle__knob" />
+              </button>
             </label>
           </div>
 
@@ -216,14 +235,22 @@ const previewStyle = computed(() => ({
             <div class="tpreview__label">Aperçu</div>
             <div class="tpreview__term" :style="previewStyle">
               <div>
-                <span class="c-green">deploy@web-01</span><span class="c-dim">:</span><span class="c-blue">~/app</span><span class="c-gray">$ </span>git status -sb
+                <span class="c-green">deploy@web-01</span><span class="c-dim">:</span
+                ><span class="c-blue">~/app</span><span class="c-gray">$ </span>git status
+                -sb
               </div>
               <div><span class="c-violet">## main...origin/main</span></div>
               <div><span class="c-green"> M </span>src/components/ServerCard.vue</div>
               <div><span class="c-amber">?? </span>src/assets/theme.css</div>
               <div class="c-dim">→ ligatures : != &gt;= =&gt; ---</div>
               <div class="tpreview__swatches">
-                <span style="background: #f0565f" /><span style="background: #e9a23b" /><span style="background: #23c48a" /><span style="background: #22b8d9" /><span style="background: #4c8dff" /><span style="background: #a96cf5" /><span style="background: #d6e1ec" />
+                <span style="background: #f0565f" /><span
+                  style="background: #e9a23b"
+                /><span style="background: #23c48a" /><span
+                  style="background: #22b8d9"
+                /><span style="background: #4c8dff" /><span
+                  style="background: #a96cf5"
+                /><span style="background: #d6e1ec" />
               </div>
             </div>
           </div>
@@ -253,19 +280,30 @@ const previewStyle = computed(() => ({
         <div class="card">
           <div class="sec">
             <span class="sec__title">Base locale chiffrée</span>
-            <span class="sec__detail">Serveurs et tunnels stockés dans SQLite chiffrée (SQLCipher, AES-256).</span>
+            <span class="sec__detail"
+              >Serveurs et tunnels stockés dans SQLite chiffrée (SQLCipher,
+              AES-256).</span
+            >
           </div>
           <div class="sec">
             <span class="sec__title">Clé dans le trousseau natif</span>
-            <span class="sec__detail">La clé de chiffrement vit dans le Trousseau macOS — jamais sur disque en clair.</span>
+            <span class="sec__detail"
+              >La clé de chiffrement vit dans le Trousseau macOS — jamais sur disque en
+              clair.</span
+            >
           </div>
           <div class="sec">
             <span class="sec__title">SSH natif</span>
-            <span class="sec__detail">Connexions via le binaire OpenSSH du système. Aucune réimplémentation du protocole.</span>
+            <span class="sec__detail"
+              >Connexions via le binaire OpenSSH du système. Aucune réimplémentation du
+              protocole.</span
+            >
           </div>
           <div class="sec">
             <span class="sec__title">100 % local</span>
-            <span class="sec__detail">Aucune donnée ne quitte votre machine. Pas de télémétrie.</span>
+            <span class="sec__detail"
+              >Aucune donnée ne quitte votre machine. Pas de télémétrie.</span
+            >
           </div>
         </div>
       </template>
@@ -279,12 +317,17 @@ const previewStyle = computed(() => ({
         <div class="card">
           <div class="sec">
             <span class="sec__title">Journaux</span>
-            <span class="sec__detail">Fichiers de logs avec rotation (5 Mo) dans le dossier de logs de l'application.</span>
+            <span class="sec__detail"
+              >Fichiers de logs avec rotation (5 Mo) dans le dossier de logs de
+              l'application.</span
+            >
           </div>
           <div class="advrow">
             <div>
               <div class="sec__title">Réinitialiser les réglages du terminal</div>
-              <div class="sec__detail">Police, taille, interlignage et curseur reviennent aux valeurs par défaut.</div>
+              <div class="sec__detail">
+                Police, taille, interlignage et curseur reviennent aux valeurs par défaut.
+              </div>
             </div>
             <button class="resetbtn" @click="settings.reset()">Réinitialiser</button>
           </div>
@@ -296,7 +339,13 @@ const previewStyle = computed(() => ({
         <div v-if="toastVisible" class="toast">
           <div class="toast__mark">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M3.2 7.2l2.6 2.6 5-5.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" />
+              <path
+                d="M3.2 7.2l2.6 2.6 5-5.6"
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </div>
           <div class="toast__body">
@@ -351,7 +400,9 @@ const previewStyle = computed(() => ({
   color: var(--g-t2);
   cursor: pointer;
   text-align: left;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .subnav__item:hover {
@@ -449,7 +500,10 @@ const previewStyle = computed(() => ({
   cursor: pointer;
   font-family: inherit;
   text-align: left;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+  transition:
+    border-color 0.14s ease,
+    box-shadow 0.14s ease,
+    background 0.14s ease;
 }
 
 .themecard--on {
@@ -539,7 +593,9 @@ const previewStyle = computed(() => ({
 }
 
 .accentsw--on {
-  box-shadow: 0 0 0 2px var(--g-s1), 0 0 0 4px var(--sw);
+  box-shadow:
+    0 0 0 2px var(--g-s1),
+    0 0 0 4px var(--sw);
 }
 
 /* Réglages terminal */
@@ -693,12 +749,24 @@ const previewStyle = computed(() => ({
   overflow: hidden;
 }
 
-.c-green { color: #23c48a; }
-.c-blue { color: #4c8dff; }
-.c-violet { color: #a96cf5; }
-.c-amber { color: #e9a23b; }
-.c-gray { color: #9aa7b8; }
-.c-dim { color: #6b7a8d; }
+.c-green {
+  color: #23c48a;
+}
+.c-blue {
+  color: #4c8dff;
+}
+.c-violet {
+  color: #a96cf5;
+}
+.c-amber {
+  color: #e9a23b;
+}
+.c-gray {
+  color: #9aa7b8;
+}
+.c-dim {
+  color: #6b7a8d;
+}
 
 .tpreview__swatches {
   margin-top: 6px;
@@ -807,7 +875,9 @@ const previewStyle = computed(() => ({
 }
 
 .toast-enter-active {
-  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.18s ease-out;
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1),
+    opacity 0.18s ease-out;
 }
 
 .toast-enter-from {

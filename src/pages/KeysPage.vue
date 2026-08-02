@@ -18,7 +18,12 @@ const { filteredKeys, keys, loading, error, query } = storeToRefs(store);
 // --- Génération ---
 type KeyType = "ed25519" | "rsa" | "ecdsa";
 const genOpen = ref(false);
-const gen = reactive({ name: "", keyType: "ed25519" as KeyType, comment: "", passphrase: "" });
+const gen = reactive({
+  name: "",
+  keyType: "ed25519" as KeyType,
+  comment: "",
+  passphrase: "",
+});
 const genSubmitted = ref(false);
 const busy = ref(false);
 const showPass = ref(false);
@@ -76,7 +81,11 @@ async function submitGenerate(): Promise<void> {
 async function importKey(): Promise<void> {
   const path = await keysRepository.pickKeyFile();
   if (!path) return;
-  const base = path.split("/").pop()?.replace(/\.pub$/, "") ?? "cle-importee";
+  const base =
+    path
+      .split("/")
+      .pop()
+      ?.replace(/\.pub$/, "") ?? "cle-importee";
   const name = window.prompt("Nom du fichier dans ~/.ssh :", base);
   if (!name) return;
   try {
@@ -145,7 +154,11 @@ async function onChangePassphrase(payload: {
   newPassphrase: string;
 }): Promise<void> {
   try {
-    await store.changePassphrase(payload.name, payload.oldPassphrase, payload.newPassphrase);
+    await store.changePassphrase(
+      payload.name,
+      payload.oldPassphrase,
+      payload.newPassphrase,
+    );
     notice.value = payload.newPassphrase
       ? `Passphrase de « ${payload.name} » mise à jour`
       : `Passphrase de « ${payload.name} » retirée`;
@@ -194,26 +207,48 @@ onMounted(() => {
       <div class="topbar__titles">
         <div class="topbar__title">Clés SSH</div>
         <div class="topbar__sub">
-          {{ keys.length }} paire{{ keys.length > 1 ? "s" : "" }} détectée{{ keys.length > 1 ? "s" : "" }}
+          {{ keys.length }} paire{{ keys.length > 1 ? "s" : "" }} détectée{{
+            keys.length > 1 ? "s" : ""
+          }}
           dans ~/.ssh · jamais transmises
         </div>
       </div>
       <div class="filter">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
           <circle cx="7" cy="7" r="4.4" stroke="currentColor" stroke-width="1.5" />
-          <path d="M10.4 10.4L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          <path
+            d="M10.4 10.4L14 14"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
         </svg>
-        <input v-model="query" type="text" placeholder="Filtrer les clés" spellcheck="false" />
+        <input
+          v-model="query"
+          type="text"
+          placeholder="Filtrer les clés"
+          spellcheck="false"
+        />
       </div>
       <button class="btn" @click="importKey">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-          <path d="M7 9.6V2.6M4.2 6l2.8 2.8L9.8 6M2.4 11.4h9.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          <path
+            d="M7 9.6V2.6M4.2 6l2.8 2.8L9.8 6M2.4 11.4h9.2"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
         </svg>
         Importer
       </button>
       <button class="btn btn--primary" @click="openGenerate">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-          <path d="M7 2.4v9.2M2.4 7h9.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+          <path
+            d="M7 2.4v9.2M2.4 7h9.2"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+          />
         </svg>
         Générer
       </button>
@@ -239,7 +274,12 @@ onMounted(() => {
         <button class="invite" @click="openGenerate">
           <span class="invite__ava">
             <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <path d="M9 4v10M4 9h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+              <path
+                d="M9 4v10M4 9h10"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
+              />
             </svg>
           </span>
           <span class="invite__title">Générer une nouvelle paire</span>
@@ -268,8 +308,19 @@ onMounted(() => {
           <header class="dialog__head">
             <div class="dialog__badge">
               <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-                <circle cx="6.2" cy="6.2" r="3.4" stroke="currentColor" stroke-width="1.6" />
-                <path d="M8.7 8.7L14.5 14.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                <circle
+                  cx="6.2"
+                  cy="6.2"
+                  r="3.4"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                />
+                <path
+                  d="M8.7 8.7L14.5 14.5"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
               </svg>
             </div>
             <div class="dialog__titles">
@@ -289,7 +340,9 @@ onMounted(() => {
                   class="segmented__btn"
                   :class="{ 'segmented__btn--on': gen.keyType === t.value }"
                   @click="gen.keyType = t.value"
-                >{{ t.label }}</button>
+                >
+                  {{ t.label }}
+                </button>
               </div>
             </div>
 
@@ -297,9 +350,16 @@ onMounted(() => {
               <label>Nom du fichier</label>
               <div class="field__prefixed">
                 <span class="field__prefix">~/.ssh/</span>
-                <input v-model="gen.name" type="text" class="mono" placeholder="id_ed25519_prod" />
+                <input
+                  v-model="gen.name"
+                  type="text"
+                  class="mono"
+                  placeholder="id_ed25519_prod"
+                />
               </div>
-              <span v-if="genSubmitted && !gen.name.trim()" class="field__err">Requis</span>
+              <span v-if="genSubmitted && !gen.name.trim()" class="field__err"
+                >Requis</span
+              >
             </div>
 
             <div class="field">
@@ -311,10 +371,25 @@ onMounted(() => {
                   class="mono"
                   placeholder="••••••••••"
                 />
-                <button type="button" class="field__eye" title="Afficher" @click="showPass = !showPass">
+                <button
+                  type="button"
+                  class="field__eye"
+                  title="Afficher"
+                  @click="showPass = !showPass"
+                >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z" stroke="currentColor" stroke-width="1.3" />
-                    <circle cx="8" cy="8" r="1.7" stroke="currentColor" stroke-width="1.3" />
+                    <path
+                      d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z"
+                      stroke="currentColor"
+                      stroke-width="1.3"
+                    />
+                    <circle
+                      cx="8"
+                      cy="8"
+                      r="1.7"
+                      stroke="currentColor"
+                      stroke-width="1.3"
+                    />
                   </svg>
                 </button>
               </div>
@@ -322,7 +397,10 @@ onMounted(() => {
                 <div class="gauge__track">
                   <div
                     class="gauge__fill"
-                    :style="{ width: passStrength.pct + '%', background: passStrength.color }"
+                    :style="{
+                      width: passStrength.pct + '%',
+                      background: passStrength.color,
+                    }"
                   />
                 </div>
                 <span class="gauge__label" :style="{ color: passStrength.color }">
@@ -333,13 +411,25 @@ onMounted(() => {
 
             <div class="field">
               <label>Commentaire</label>
-              <input v-model="gen.comment" type="text" class="mono" placeholder="ops@galvus.dev" />
+              <input
+                v-model="gen.comment"
+                type="text"
+                class="mono"
+                placeholder="ops@galvus.dev"
+              />
             </div>
           </form>
 
           <footer class="dialog__foot">
-            <button type="button" class="btn" :disabled="busy" @click="genOpen = false">Annuler</button>
-            <button type="button" class="btn btn--primary" :disabled="busy" @click="submitGenerate">
+            <button type="button" class="btn" :disabled="busy" @click="genOpen = false">
+              Annuler
+            </button>
+            <button
+              type="button"
+              class="btn btn--primary"
+              :disabled="busy"
+              @click="submitGenerate"
+            >
               <span v-if="busy" class="spinner" />
               {{ busy ? "Génération…" : "Générer" }}
             </button>
@@ -398,7 +488,9 @@ onMounted(() => {
   border: 1px solid var(--g-border);
   width: 230px;
   color: var(--g-t3);
-  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+  transition:
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
 .filter:focus-within {
@@ -635,7 +727,9 @@ onMounted(() => {
   transition: opacity 0.12s ease-out;
 }
 .dlg-enter-active .dialog {
-  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.18s ease-out;
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1),
+    opacity 0.18s ease-out;
 }
 .dlg-enter-from {
   opacity: 0;
@@ -723,7 +817,9 @@ onMounted(() => {
   outline: none;
   width: 100%;
   box-sizing: border-box;
-  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+  transition:
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
 .field input.mono {
@@ -765,7 +861,9 @@ onMounted(() => {
   font-weight: 500;
   color: var(--g-t2);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .segmented__btn--on {

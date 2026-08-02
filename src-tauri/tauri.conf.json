@@ -40,7 +40,7 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/OWNER/galvus/releases/latest/download/latest.json"
+        "https://github.com/meissaniang/galvus/releases/latest/download/latest.json"
       ],
       "pubkey": "REMPLACER_PAR_LA_CLE_PUBLIQUE_TAURI_SIGNER"
     }

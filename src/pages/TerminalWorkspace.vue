@@ -25,7 +25,10 @@ function tileColor(label: string): string {
 }
 
 function abbr(label: string): string {
-  return label.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase();
+  return label
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
 function statusText(tab: TerminalTab | null): string {
@@ -73,20 +76,41 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
         @click="connections.setActiveTab(tab.id)"
       >
         <span v-if="tab.id === activeTabId" class="wtab__accent" />
-        <span class="wtab__tile" :style="{ background: tileColor(tab.panes[0]?.label ?? '') }">
+        <span
+          class="wtab__tile"
+          :style="{ background: tileColor(tab.panes[0]?.label ?? '') }"
+        >
           {{ abbr(tab.panes[0]?.label ?? "") }}
         </span>
         <span class="wtab__label">{{ connections.tabTitle(tab) }}</span>
-        <button class="wtab__close" :title="`Fermer l'onglet (${shortcut('W')})`" @click.stop="connections.closeTab(tab.id)">
+        <button
+          class="wtab__close"
+          :title="`Fermer l'onglet (${shortcut('W')})`"
+          @click.stop="connections.closeTab(tab.id)"
+        >
           <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-            <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            <path
+              d="M3 3l6 6M9 3l-6 6"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
           </svg>
         </button>
       </div>
 
-      <button class="tabsbar__new" title="Nouvelle session" @click="router.push({ name: 'servers' })">
+      <button
+        class="tabsbar__new"
+        title="Nouvelle session"
+        @click="router.push({ name: 'servers' })"
+      >
         <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-          <path d="M7 2.6v8.8M2.6 7h8.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+          <path
+            d="M7 2.6v8.8M2.6 7h8.8"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+          />
         </svg>
       </button>
 
@@ -95,23 +119,44 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
       <div v-if="activeTab" class="tabsbar__splits">
         <button
           class="splitbtn"
-          :class="{ 'splitbtn--on': activeTab.direction === 'row' && activeTab.panes.length > 1 }"
+          :class="{
+            'splitbtn--on': activeTab.direction === 'row' && activeTab.panes.length > 1,
+          }"
           :title="`Split vertical (${shortcut('D')})`"
           @click="connections.splitActive('row')"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <rect x="1.6" y="1.6" width="10.8" height="10.8" rx="2" stroke="currentColor" stroke-width="1.3" />
+            <rect
+              x="1.6"
+              y="1.6"
+              width="10.8"
+              height="10.8"
+              rx="2"
+              stroke="currentColor"
+              stroke-width="1.3"
+            />
             <path d="M7 1.6v10.8" stroke="currentColor" stroke-width="1.3" />
           </svg>
         </button>
         <button
           class="splitbtn"
-          :class="{ 'splitbtn--on': activeTab.direction === 'column' && activeTab.panes.length > 1 }"
+          :class="{
+            'splitbtn--on':
+              activeTab.direction === 'column' && activeTab.panes.length > 1,
+          }"
           :title="`Split horizontal (${shortcut('\u21e7D')})`"
           @click="connections.splitActive('column')"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <rect x="1.6" y="1.6" width="10.8" height="10.8" rx="2" stroke="currentColor" stroke-width="1.3" />
+            <rect
+              x="1.6"
+              y="1.6"
+              width="10.8"
+              height="10.8"
+              rx="2"
+              stroke="currentColor"
+              stroke-width="1.3"
+            />
             <path d="M1.6 7h10.8" stroke="currentColor" stroke-width="1.3" />
           </svg>
         </button>
@@ -138,7 +183,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
             <span class="pane__dot" />
             <span class="pane__title">
               {{ pane.label }} — pane {{ index + 1
-              }}{{ tab.panes.length > 1 && pane.id === tab.activePaneId ? " · actif" : "" }}
+              }}{{
+                tab.panes.length > 1 && pane.id === tab.activePaneId ? " · actif" : ""
+              }}
             </span>
             <span class="pane__spacer" />
             <button
@@ -148,7 +195,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
               @click.stop="connections.closePane(tab.id, pane.id)"
             >
               <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
-                <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                <path
+                  d="M3 3l6 6M9 3l-6 6"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
               </svg>
             </button>
           </div>
@@ -158,8 +210,21 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 
       <div v-if="tabs.length === 0" class="empty">
         <svg width="34" height="34" viewBox="0 0 18 18" fill="none">
-          <rect x="2.5" y="3" width="13" height="12" rx="2.4" stroke="currentColor" stroke-width="1.2" />
-          <path d="M5.5 7.2l2 1.9-2 1.9M9.6 11.2h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+          <rect
+            x="2.5"
+            y="3"
+            width="13"
+            height="12"
+            rx="2.4"
+            stroke="currentColor"
+            stroke-width="1.2"
+          />
+          <path
+            d="M5.5 7.2l2 1.9-2 1.9M9.6 11.2h3"
+            stroke="currentColor"
+            stroke-width="1.2"
+            stroke-linecap="round"
+          />
         </svg>
         <p>Aucune session ouverte.</p>
         <button class="empty__cta" @click="router.push({ name: 'servers' })">
@@ -173,7 +238,10 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
       <span class="statusbar__strong">{{ statusText(activeTab) }}</span>
       <span>scrollback 5 000 lignes</span>
       <span class="statusbar__spacer" />
-      <span>{{ shortcut("D") }} split · {{ shortcut("\u21e7D") }} split H · {{ shortcut("W") }} fermer</span>
+      <span
+        >{{ shortcut("D") }} split · {{ shortcut("\u21e7D") }} split H ·
+        {{ shortcut("W") }} fermer</span
+      >
     </div>
   </section>
 </template>
@@ -212,7 +280,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
   color: var(--g-t2);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .wtab:hover {
@@ -319,7 +389,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
   justify-content: center;
   color: var(--g-t2);
   cursor: pointer;
-  transition: color 0.12s ease, border-color 0.12s ease;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .splitbtn:hover {

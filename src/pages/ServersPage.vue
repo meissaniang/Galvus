@@ -75,7 +75,9 @@ const groupedServers = computed<[string, Server[]][]>(() => {
 });
 
 const groupNames = computed(() =>
-  [...new Set(servers.value.map((s) => s.group).filter((g): g is string => Boolean(g)))].sort(),
+  [
+    ...new Set(servers.value.map((s) => s.group).filter((g): g is string => Boolean(g))),
+  ].sort(),
 );
 
 /** Hôtes du config : filtrés puis triés selon le même critère. */
@@ -215,7 +217,12 @@ function addressOf(server: Server): string {
       <div class="search">
         <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
           <circle cx="7" cy="7" r="4.4" stroke="currentColor" stroke-width="1.5" />
-          <path d="M10.4 10.4L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          <path
+            d="M10.4 10.4L14 14"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
         </svg>
         <input
           ref="searchInput"
@@ -235,7 +242,12 @@ function addressOf(server: Server): string {
           <option value="recent">Récents</option>
         </select>
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M3 4.6l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+          <path
+            d="M3 4.6l3 3 3-3"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
         </svg>
       </label>
 
@@ -269,7 +281,12 @@ function addressOf(server: Server): string {
 
       <button class="newbtn" @click="openNew()">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-          <path d="M7 2.4v9.2M2.4 7h9.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+          <path
+            d="M7 2.4v9.2M2.4 7h9.2"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+          />
         </svg>
         Nouveau serveur
       </button>
@@ -280,7 +297,11 @@ function addressOf(server: Server): string {
       <p v-if="serversError" class="state state--error">{{ serversError }}</p>
 
       <!-- Groupes de serveurs -->
-      <section v-for="[group, list] in groupedServers" :key="group || '__none'" class="group">
+      <section
+        v-for="[group, list] in groupedServers"
+        :key="group || '__none'"
+        class="group"
+      >
         <header class="group__head">
           <button
             class="group__chevron"
@@ -288,7 +309,12 @@ function addressOf(server: Server): string {
             @click="toggleGroup(group)"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M3 4.6l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path
+                d="M3 4.6l3 3 3-3"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
             </svg>
           </button>
           <span class="group__name">{{ group || "Mes serveurs" }}</span>
@@ -311,7 +337,12 @@ function addressOf(server: Server): string {
             />
             <button class="addcard" @click="openNew(group || null)">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                <path d="M7 2.4v9.2M2.4 7h9.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                <path
+                  d="M7 2.4v9.2M2.4 7h9.2"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                  stroke-linecap="round"
+                />
               </svg>
               {{ group ? `Ajouter à ${group}` : "Ajouter un serveur" }}
             </button>
@@ -328,25 +359,44 @@ function addressOf(server: Server): string {
               <span
                 class="row__ava"
                 :style="{ background: server.color ?? 'var(--g-s3)' }"
-              >{{ server.name.slice(0, 2).toUpperCase() }}</span>
+                >{{ server.name.slice(0, 2).toUpperCase() }}</span
+              >
               <span class="row__name">
                 {{ server.name }}
                 <span v-if="connectedLabels.has(server.name)" class="row__dot" />
               </span>
               <span class="row__addr">{{ addressOf(server) }}</span>
               <span class="row__tags">
-                <span v-for="tag in server.tags" :key="tag" class="row__tag">{{ tag }}</span>
+                <span v-for="tag in server.tags" :key="tag" class="row__tag">{{
+                  tag
+                }}</span>
               </span>
               <span class="row__actions">
-                <button class="row__connect" @click.stop="connectServer(server)">Connecter</button>
+                <button class="row__connect" @click.stop="connectServer(server)">
+                  Connecter
+                </button>
                 <button class="row__icon" title="Éditer" @click.stop="openEdit(server)">
                   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                    <path d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+                    <path
+                      d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z"
+                      stroke="currentColor"
+                      stroke-width="1.4"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                 </button>
-                <button class="row__icon row__icon--danger" title="Supprimer" @click.stop="onRemove(server)">
+                <button
+                  class="row__icon row__icon--danger"
+                  title="Supprimer"
+                  @click.stop="onRemove(server)"
+                >
                   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                    <path d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                    <path
+                      d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4"
+                      stroke="currentColor"
+                      stroke-width="1.3"
+                      stroke-linecap="round"
+                    />
                   </svg>
                 </button>
               </span>
@@ -364,14 +414,31 @@ function addressOf(server: Server): string {
             @click="configCollapsed = !configCollapsed"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M3 4.6l3 3 3-3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <path
+                d="M3 4.6l3 3 3-3"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
             </svg>
           </button>
           <span class="group__mono">~/.ssh/config</span>
           <span class="group__lock">
             <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-              <rect x="1.6" y="4.4" width="6.8" height="4.4" rx="1.2" stroke="currentColor" stroke-width="1.2" />
-              <path d="M3.4 4.4V3.2a1.6 1.6 0 013.2 0v1.2" stroke="currentColor" stroke-width="1.2" />
+              <rect
+                x="1.6"
+                y="4.4"
+                width="6.8"
+                height="4.4"
+                rx="1.2"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
+              <path
+                d="M3.4 4.4V3.2a1.6 1.6 0 013.2 0v1.2"
+                stroke="currentColor"
+                stroke-width="1.2"
+              />
             </svg>
             lecture seule
           </span>
@@ -399,8 +466,24 @@ function addressOf(server: Server): string {
         class="empty"
       >
         <svg width="34" height="34" viewBox="0 0 18 18" fill="none">
-          <rect x="2.5" y="2.8" width="13" height="5" rx="1.8" stroke="currentColor" stroke-width="1.2" />
-          <rect x="2.5" y="10.2" width="13" height="5" rx="1.8" stroke="currentColor" stroke-width="1.2" />
+          <rect
+            x="2.5"
+            y="2.8"
+            width="13"
+            height="5"
+            rx="1.8"
+            stroke="currentColor"
+            stroke-width="1.2"
+          />
+          <rect
+            x="2.5"
+            y="10.2"
+            width="13"
+            height="5"
+            rx="1.8"
+            stroke="currentColor"
+            stroke-width="1.2"
+          />
         </svg>
         <p v-if="search">Aucun résultat pour « {{ search }} ».</p>
         <p v-else>Aucun serveur. Clique sur « Nouveau serveur » pour commencer.</p>
@@ -457,7 +540,9 @@ function addressOf(server: Server): string {
   background: var(--g-s2);
   border: 1px solid var(--g-border);
   color: var(--g-t3);
-  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+  transition:
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
 .search:focus-within {
@@ -542,7 +627,9 @@ function addressOf(server: Server): string {
   background: transparent;
   color: var(--g-t3);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .viewtoggle__btn--on {
@@ -694,7 +781,9 @@ function addressOf(server: Server): string {
   font-size: 12.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: color 0.12s ease, border-color 0.12s ease;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .addcard:hover {
@@ -718,7 +807,9 @@ function addressOf(server: Server): string {
   border: 1px solid var(--g-border);
   border-radius: 10px;
   background: var(--g-s1);
-  transition: background 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .row:hover {

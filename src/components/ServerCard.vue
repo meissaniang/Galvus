@@ -34,12 +34,13 @@ const accent = computed(() => {
   return `hsl(${hue} 65% 48%)`;
 });
 
-const tileFg = computed(
-  () => LIGHT_TILES[accent.value.toLowerCase()] ?? "#ffffff",
-);
+const tileFg = computed(() => LIGHT_TILES[accent.value.toLowerCase()] ?? "#ffffff");
 
 const initials = computed(() =>
-  props.server.name.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).toUpperCase(),
+  props.server.name
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 2)
+    .toUpperCase(),
 );
 
 const address = computed(() => {
@@ -69,15 +70,31 @@ const address = computed(() => {
           <span v-if="server.tags.length === 0" class="tile__notags">—</span>
         </div>
         <div class="tile__actions">
-          <button class="tile__connect" @click.stop="emit('connect', server)">Connecter</button>
+          <button class="tile__connect" @click.stop="emit('connect', server)">
+            Connecter
+          </button>
           <button class="tile__icon" title="Éditer" @click.stop="emit('edit', server)">
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-              <path d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+              <path
+                d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z"
+                stroke="currentColor"
+                stroke-width="1.4"
+                stroke-linejoin="round"
+              />
             </svg>
           </button>
-          <button class="tile__icon tile__icon--danger" title="Supprimer" @click.stop="emit('remove', server)">
+          <button
+            class="tile__icon tile__icon--danger"
+            title="Supprimer"
+            @click.stop="emit('remove', server)"
+          >
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-              <path d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+              <path
+                d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4"
+                stroke="currentColor"
+                stroke-width="1.3"
+                stroke-linecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -90,7 +107,12 @@ const address = computed(() => {
       :title="server.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
       @click.stop="emit('toggleFavorite', server)"
     >
-      <svg width="15" height="15" viewBox="0 0 16 16" :fill="server.favorite ? 'var(--g-warning)' : 'none'">
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 16 16"
+        :fill="server.favorite ? 'var(--g-warning)' : 'none'"
+      >
         <path
           d="M8 1.6l1.9 3.9 4.3.6-3.1 3 .74 4.3L8 11.4l-3.83 2 .74-4.3-3.1-3 4.3-.6z"
           :stroke="server.favorite ? 'var(--g-warning)' : 'currentColor'"
@@ -193,7 +215,9 @@ const address = computed(() => {
   display: flex;
   align-items: center;
   gap: 5px;
-  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  transition:
+    opacity 0.12s ease-out,
+    transform 0.12s ease-out;
 }
 
 .tile__tags {
@@ -273,7 +297,10 @@ const address = computed(() => {
   border: 1px solid var(--g-border);
   color: var(--g-t2);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .tile__icon:hover {

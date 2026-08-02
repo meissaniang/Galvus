@@ -10,7 +10,10 @@ const props = defineProps<{ host: Host; connected?: boolean }>();
 const emit = defineEmits<{ edit: [host: Host]; remove: [host: Host] }>();
 
 const abbr = computed(() =>
-  props.host.alias.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toLowerCase(),
+  props.host.alias
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 3)
+    .toLowerCase(),
 );
 
 const address = computed(() => {
@@ -28,14 +31,28 @@ const address = computed(() => {
       <div class="hostcard__head">
         <span class="hostcard__name">{{ host.alias }}</span>
         <span v-if="connected" class="hostcard__on" title="Session ouverte" />
-        <span v-if="host.proxyJump" class="hostcard__jump" :title="`ProxyJump ${host.proxyJump}`">jump</span>
+        <span
+          v-if="host.proxyJump"
+          class="hostcard__jump"
+          :title="`ProxyJump ${host.proxyJump}`"
+          >jump</span
+        >
       </div>
       <div class="hostcard__addr">{{ address }}</div>
     </div>
     <div class="hostcard__actions">
-      <button class="hostcard__icon" title="Éditer dans ~/.ssh/config" @click.stop="emit('edit', host)">
+      <button
+        class="hostcard__icon"
+        title="Éditer dans ~/.ssh/config"
+        @click.stop="emit('edit', host)"
+      >
         <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-          <path d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" />
+          <path
+            d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linejoin="round"
+          />
         </svg>
       </button>
       <button
@@ -44,7 +61,12 @@ const address = computed(() => {
         @click.stop="emit('remove', host)"
       >
         <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-          <path d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+          <path
+            d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4"
+            stroke="currentColor"
+            stroke-width="1.3"
+            stroke-linecap="round"
+          />
         </svg>
       </button>
     </div>
@@ -61,7 +83,9 @@ const address = computed(() => {
   border: 1px dashed var(--g-border);
   border-radius: 12px;
   cursor: pointer;
-  transition: border-color 0.14s ease, background 0.14s ease;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease;
 }
 
 .hostcard:hover {
@@ -112,7 +136,10 @@ const address = computed(() => {
   border: 1px solid var(--g-border);
   color: var(--g-t2);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
 }
 
 .hostcard__icon:hover {

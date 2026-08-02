@@ -108,7 +108,8 @@ async function submit(): Promise<void> {
 }
 
 function mapping(t: Tunnel): { left: string; right: string | null } {
-  if (t.kind === "dynamic") return { left: `socks5 · 127.0.0.1:${t.listenPort}`, right: null };
+  if (t.kind === "dynamic")
+    return { left: `socks5 · 127.0.0.1:${t.listenPort}`, right: null };
   if (t.kind === "remote")
     return { left: `distant:${t.listenPort}`, right: `${t.targetHost}:${t.targetPort}` };
   return { left: `127.0.0.1:${t.listenPort}`, right: `${t.targetHost}:${t.targetPort}` };
@@ -151,16 +152,25 @@ onMounted(() => {
           class="segmented__btn"
           :class="{ 'segmented__btn--on': filter === 'all' }"
           @click="filter = 'all'"
-        >Tous</button>
+        >
+          Tous
+        </button>
         <button
           class="segmented__btn"
           :class="{ 'segmented__btn--on': filter === 'active' }"
           @click="filter = 'active'"
-        >Actifs</button>
+        >
+          Actifs
+        </button>
       </div>
       <button class="newbtn" @click="openPanel">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-          <path d="M7 2.4v9.2M2.4 7h9.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" />
+          <path
+            d="M7 2.4v9.2M2.4 7h9.2"
+            stroke="currentColor"
+            stroke-width="1.9"
+            stroke-linecap="round"
+          />
         </svg>
         Nouveau tunnel
       </button>
@@ -172,7 +182,8 @@ onMounted(() => {
         <p v-if="error" class="state state--error">{{ error }}</p>
 
         <div v-if="visibleTunnels.length > 0" class="cols">
-          <span></span><span>Type</span><span>Nom / serveur</span><span>Mapping</span><span></span>
+          <span></span><span>Type</span><span>Nom / serveur</span><span>Mapping</span
+          ><span></span>
         </div>
 
         <div
@@ -204,25 +215,36 @@ onMounted(() => {
           <span class="trow__map">
             {{ mapping(t).left }}
             <template v-if="mapping(t).right">
-              <span class="trow__arrow" :class="{ 'trow__arrow--error': lastError?.id === t.id }">→</span>
+              <span
+                class="trow__arrow"
+                :class="{ 'trow__arrow--error': lastError?.id === t.id }"
+                >→</span
+              >
               {{ mapping(t).right }}
             </template>
           </span>
           <span class="trow__actions">
-            <button
-              v-if="store.isRunning(t.id)"
-              class="act"
-              @click="store.stop(t.id)"
-            >Arrêter</button>
+            <button v-if="store.isRunning(t.id)" class="act" @click="store.stop(t.id)">
+              Arrêter
+            </button>
             <button
               v-else-if="lastError?.id === t.id"
               class="act act--retry"
               @click="store.start(t.id)"
-            >Réessayer</button>
-            <button v-else class="act act--primary" @click="store.start(t.id)">Démarrer</button>
+            >
+              Réessayer
+            </button>
+            <button v-else class="act act--primary" @click="store.start(t.id)">
+              Démarrer
+            </button>
             <button class="act-icon" title="Supprimer" @click="removeTunnel(t)">
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                <path d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" />
+                <path
+                  d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4"
+                  stroke="currentColor"
+                  stroke-width="1.3"
+                  stroke-linecap="round"
+                />
               </svg>
             </button>
           </span>
@@ -261,7 +283,9 @@ onMounted(() => {
                 class="segmented__btn"
                 :class="{ 'segmented__btn--on': form.kind === k.value }"
                 @click="form.kind = k.value"
-              >{{ k.label }}</button>
+              >
+                {{ k.label }}
+              </button>
             </div>
           </div>
 
@@ -279,23 +303,42 @@ onMounted(() => {
                 {{ t.label }}
               </option>
             </select>
-            <span v-if="submitted && !form.sshTarget.trim()" class="field__err">Requis</span>
+            <span v-if="submitted && !form.sshTarget.trim()" class="field__err"
+              >Requis</span
+            >
           </div>
 
           <div class="pair">
             <div class="field">
               <label>Port local</label>
-              <input v-model.number="form.listenPort" type="number" class="mono" min="1" max="65535" />
+              <input
+                v-model.number="form.listenPort"
+                type="number"
+                class="mono"
+                min="1"
+                max="65535"
+              />
             </div>
             <div v-if="needsTarget" class="field">
               <label>Port distant</label>
-              <input v-model.number="form.targetPort" type="number" class="mono" min="1" max="65535" />
+              <input
+                v-model.number="form.targetPort"
+                type="number"
+                class="mono"
+                min="1"
+                max="65535"
+              />
             </div>
           </div>
 
           <div v-if="needsTarget" class="field">
             <label>Hôte distant</label>
-            <input v-model="form.targetHost" type="text" class="mono" placeholder="localhost" />
+            <input
+              v-model="form.targetHost"
+              type="text"
+              class="mono"
+              placeholder="localhost"
+            />
           </div>
 
           <label class="autostart">
@@ -390,7 +433,9 @@ onMounted(() => {
   font-weight: 500;
   color: var(--g-t2);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .segmented--full .segmented__btn {
@@ -727,7 +772,9 @@ onMounted(() => {
 }
 
 .panel-enter-active {
-  transition: transform 0.24s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.24s ease-out;
+  transition:
+    transform 0.24s cubic-bezier(0.2, 0.8, 0.3, 1),
+    opacity 0.24s ease-out;
 }
 
 .panel-enter-from {
@@ -736,7 +783,9 @@ onMounted(() => {
 }
 
 .panel-leave-active {
-  transition: transform 0.18s ease-in, opacity 0.18s ease-in;
+  transition:
+    transform 0.18s ease-in,
+    opacity 0.18s ease-in;
 }
 
 .panel-leave-to {
@@ -781,7 +830,9 @@ onMounted(() => {
   outline: none;
   width: 100%;
   box-sizing: border-box;
-  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+  transition:
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
 .field input.mono {

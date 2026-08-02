@@ -124,11 +124,31 @@ onBeforeUnmount(() => {
       <div class="sb__label">Navigation</div>
 
       <nav class="sb__nav">
-        <router-link :to="{ name: 'servers' }" class="sb__item" :class="{ 'sb__item--on': isActive('servers') }">
+        <router-link
+          :to="{ name: 'servers' }"
+          class="sb__item"
+          :class="{ 'sb__item--on': isActive('servers') }"
+        >
           <span class="sb__bar" />
           <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-            <rect x="2.5" y="2.8" width="13" height="5" rx="1.8" stroke="currentColor" stroke-width="1.5" />
-            <rect x="2.5" y="10.2" width="13" height="5" rx="1.8" stroke="currentColor" stroke-width="1.5" />
+            <rect
+              x="2.5"
+              y="2.8"
+              width="13"
+              height="5"
+              rx="1.8"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <rect
+              x="2.5"
+              y="10.2"
+              width="13"
+              height="5"
+              rx="1.8"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
             <circle cx="5.4" cy="5.3" r="1" fill="currentColor" />
             <circle cx="5.4" cy="12.7" r="1" fill="currentColor" />
           </svg>
@@ -136,42 +156,90 @@ onBeforeUnmount(() => {
           <span class="sb__count">{{ serverCount }}</span>
         </router-link>
 
-        <router-link :to="{ name: 'keys' }" class="sb__item" :class="{ 'sb__item--on': isActive('keys') }">
+        <router-link
+          :to="{ name: 'keys' }"
+          class="sb__item"
+          :class="{ 'sb__item--on': isActive('keys') }"
+        >
           <span class="sb__bar" />
           <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
             <circle cx="6.2" cy="6.2" r="3.4" stroke="currentColor" stroke-width="1.5" />
-            <path d="M8.7 8.7L14.5 14.5M12 13l1.6-1.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <path
+              d="M8.7 8.7L14.5 14.5M12 13l1.6-1.6"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
           </svg>
           <span class="sb__text">Clés SSH</span>
           <span class="sb__count">{{ keyCount }}</span>
         </router-link>
 
-        <router-link :to="{ name: 'tunnels' }" class="sb__item" :class="{ 'sb__item--on': isActive('tunnels') }">
+        <router-link
+          :to="{ name: 'tunnels' }"
+          class="sb__item"
+          :class="{ 'sb__item--on': isActive('tunnels') }"
+        >
           <span class="sb__bar" />
           <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
             <circle cx="4.4" cy="9" r="2.3" stroke="currentColor" stroke-width="1.5" />
             <circle cx="13.6" cy="9" r="2.3" stroke="currentColor" stroke-width="1.5" />
-            <path d="M6.7 9h4.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <path
+              d="M6.7 9h4.6"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
           </svg>
           <span class="sb__text">Tunnels</span>
-          <span v-if="runningTunnels > 0" class="sb__meta"><span class="sb__dot" />{{ runningTunnels }}</span>
+          <span v-if="runningTunnels > 0" class="sb__meta"
+            ><span class="sb__dot" />{{ runningTunnels }}</span
+          >
         </router-link>
 
-        <router-link :to="{ name: 'terminal' }" class="sb__item" :class="{ 'sb__item--on': isActive('terminal') }">
+        <router-link
+          :to="{ name: 'terminal' }"
+          class="sb__item"
+          :class="{ 'sb__item--on': isActive('terminal') }"
+        >
           <span class="sb__bar" />
           <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
-            <rect x="2.5" y="3" width="13" height="12" rx="2.4" stroke="currentColor" stroke-width="1.5" />
-            <path d="M5.5 7.2l2 1.9-2 1.9M9.6 11.2h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+            <rect
+              x="2.5"
+              y="3"
+              width="13"
+              height="12"
+              rx="2.4"
+              stroke="currentColor"
+              stroke-width="1.5"
+            />
+            <path
+              d="M5.5 7.2l2 1.9-2 1.9M9.6 11.2h3"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
           </svg>
           <span class="sb__text">Terminal</span>
           <span class="sb__kbd">{{ shortcut("T") }}</span>
         </router-link>
 
-        <router-link :to="{ name: 'settings' }" class="sb__item" :class="{ 'sb__item--on': isActive('settings') }">
+        <router-link
+          :to="{ name: 'settings' }"
+          class="sb__item"
+          :class="{ 'sb__item--on': isActive('settings') }"
+        >
           <span class="sb__bar" />
           <svg width="17" height="17" viewBox="0 0 18 18" fill="none">
             <circle cx="9" cy="9" r="2.4" stroke="currentColor" stroke-width="1.5" />
-            <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2.6 2.6" />
+            <circle
+              cx="9"
+              cy="9"
+              r="6"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-dasharray="2.6 2.6"
+            />
           </svg>
           <span class="sb__text">Paramètres</span>
         </router-link>
@@ -211,7 +279,12 @@ onBeforeUnmount(() => {
           >
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
               <circle cx="7" cy="7" r="3" stroke="currentColor" stroke-width="1.5" />
-              <path d="M7 1v1.4M7 11.6V13M1 7h1.4M11.6 7H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <path
+                d="M7 1v1.4M7 11.6V13M1 7h1.4M11.6 7H13"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
             </svg>
             Clair
           </button>
@@ -221,7 +294,12 @@ onBeforeUnmount(() => {
             @click="setTheme('dark')"
           >
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-              <path d="M11.5 8.6A5 5 0 015.4 2.5a5 5 0 106.1 6.1z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" />
+              <path
+                d="M11.5 8.6A5 5 0 015.4 2.5a5 5 0 106.1 6.1z"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+              />
             </svg>
             Sombre
           </button>
@@ -332,7 +410,9 @@ onBeforeUnmount(() => {
   font-weight: 500;
   color: var(--g-t2);
   text-decoration: none;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .sb__item:hover {
@@ -356,7 +436,8 @@ onBeforeUnmount(() => {
   background: var(--g-accent);
   opacity: 0;
   transform: scaleY(0.4);
-  transition: opacity 0.16s cubic-bezier(0.2, 0.8, 0.3, 1),
+  transition:
+    opacity 0.16s cubic-bezier(0.2, 0.8, 0.3, 1),
     transform 0.16s cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 
@@ -486,7 +567,9 @@ onBeforeUnmount(() => {
   font-weight: 500;
   color: var(--g-t2);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .sb__seg--on {

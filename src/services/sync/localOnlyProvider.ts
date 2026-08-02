@@ -1,8 +1,4 @@
-import type {
-  SyncProvider,
-  SyncStatus,
-  SyncableSnapshot,
-} from "@/types/sync";
+import type { SyncProvider, SyncStatus, SyncableSnapshot } from "@/types/sync";
 
 /**
  * Fournisseur par défaut : aucune synchronisation (mode 100 % hors ligne).

@@ -17,9 +17,7 @@ const DARK_CLASS = "app-dark";
 function readStoredMode(): ThemeMode {
   const value = localStorage.getItem(STORAGE_KEY);
   // Par défaut : thème sombre (esthétique type Termius). Modifiable dans Paramètres.
-  return value === "light" || value === "dark" || value === "system"
-    ? value
-    : "dark";
+  return value === "light" || value === "dark" || value === "system" ? value : "dark";
 }
 
 function systemPrefersDark(): boolean {

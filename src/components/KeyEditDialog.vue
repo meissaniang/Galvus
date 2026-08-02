@@ -13,7 +13,9 @@ import type { SshKey } from "@/types/ssh";
 const props = defineProps<{ open: boolean; keyItem: SshKey | null }>();
 const emit = defineEmits<{
   saveContent: [payload: { name: string; kind: "private" | "public"; content: string }];
-  changePassphrase: [payload: { name: string; oldPassphrase: string; newPassphrase: string }];
+  changePassphrase: [
+    payload: { name: string; oldPassphrase: string; newPassphrase: string },
+  ];
   addToAgent: [payload: { name: string; passphrase: string; configureSsh: boolean }];
   removeFromAgent: [payload: { name: string }];
   close: [];
@@ -91,7 +93,10 @@ const strength = computed(() => {
 });
 
 const mismatch = computed(
-  () => newPass.value !== "" && confirmPass.value !== "" && newPass.value !== confirmPass.value,
+  () =>
+    newPass.value !== "" &&
+    confirmPass.value !== "" &&
+    newPass.value !== confirmPass.value,
 );
 
 /** Libellé de l'action selon l'état actuel de la clé. */
@@ -145,8 +150,19 @@ function submitAgent(): void {
         <header class="dialog__head">
           <div class="dialog__badge">
             <svg width="15" height="15" viewBox="0 0 18 18" fill="none">
-              <circle cx="6.2" cy="6.2" r="3.4" stroke="currentColor" stroke-width="1.6" />
-              <path d="M8.7 8.7L14.5 14.5M12 13l1.6-1.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              <circle
+                cx="6.2"
+                cy="6.2"
+                r="3.4"
+                stroke="currentColor"
+                stroke-width="1.6"
+              />
+              <path
+                d="M8.7 8.7L14.5 14.5M12 13l1.6-1.6"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              />
             </svg>
           </div>
           <div class="dialog__titles">
@@ -157,7 +173,12 @@ function submitAgent(): void {
           </div>
           <button class="dialog__close" title="Fermer" @click="emit('close')">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+              <path
+                d="M3 3l6 6M9 3l-6 6"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
             </svg>
           </button>
         </header>
@@ -170,7 +191,9 @@ function submitAgent(): void {
             :class="{ 'tabs__btn--on': tab === t.id }"
             :disabled="t.id === 'private' && !keyItem.hasPrivate"
             @click="tab = t.id"
-          >{{ t.label }}</button>
+          >
+            {{ t.label }}
+          </button>
         </div>
 
         <p v-if="loadError" class="err">{{ loadError }}</p>
@@ -180,7 +203,8 @@ function submitAgent(): void {
         <template v-else-if="tab === 'private' || tab === 'public'">
           <div v-if="tab === 'private'" class="warn">
             <span class="warn__mark">!</span>
-            Ne partagez jamais cette clé. Toute modification incorrecte la rendra inutilisable.
+            Ne partagez jamais cette clé. Toute modification incorrecte la rendra
+            inutilisable.
           </div>
 
           <textarea
@@ -219,7 +243,9 @@ function submitAgent(): void {
             <div class="passstate">
               <span
                 class="passstate__badge"
-                :class="keyItem.inAgent ? 'passstate__badge--on' : 'passstate__badge--off'"
+                :class="
+                  keyItem.inAgent ? 'passstate__badge--on' : 'passstate__badge--off'
+                "
               >
                 {{ keyItem.inAgent ? "chargée dans l'agent" : "absente de l'agent" }}
               </span>
@@ -227,8 +253,9 @@ function submitAgent(): void {
 
             <p class="agentnote">
               Charger la clé dans l'agent SSH évite de retaper la passphrase à chaque
-              connexion. Sur macOS, elle est mémorisée dans le <strong>Trousseau</strong> et
-              rechargée automatiquement après un redémarrage.
+              connexion. Sur macOS, elle est mémorisée dans le
+              <strong>Trousseau</strong> et rechargée automatiquement après un
+              redémarrage.
             </p>
 
             <template v-if="!keyItem.inAgent">
@@ -241,10 +268,25 @@ function submitAgent(): void {
                     class="mono"
                     placeholder="••••••••"
                   />
-                  <button type="button" class="field__eye" title="Afficher" @click="showPass = !showPass">
+                  <button
+                    type="button"
+                    class="field__eye"
+                    title="Afficher"
+                    @click="showPass = !showPass"
+                  >
                     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                      <path d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z" stroke="currentColor" stroke-width="1.3" />
-                      <circle cx="8" cy="8" r="1.7" stroke="currentColor" stroke-width="1.3" />
+                      <path
+                        d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z"
+                        stroke="currentColor"
+                        stroke-width="1.3"
+                      />
+                      <circle
+                        cx="8"
+                        cy="8"
+                        r="1.7"
+                        stroke="currentColor"
+                        stroke-width="1.3"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -262,7 +304,9 @@ function submitAgent(): void {
                   role="switch"
                   :aria-checked="configureSsh"
                   @click="configureSsh = !configureSsh"
-                ><span class="toggle__knob" /></button>
+                >
+                  <span class="toggle__knob" />
+                </button>
               </label>
             </template>
           </div>
@@ -278,7 +322,9 @@ function submitAgent(): void {
                 type="button"
                 class="btn"
                 @click="emit('removeFromAgent', { name: keyItem.name })"
-              >Retirer de l'agent</button>
+              >
+                Retirer de l'agent
+              </button>
               <button v-else type="button" class="btn btn--primary" @click="submitAgent">
                 Mémoriser la passphrase
               </button>
@@ -292,9 +338,13 @@ function submitAgent(): void {
             <div class="passstate">
               <span
                 class="passstate__badge"
-                :class="keyItem.encrypted ? 'passstate__badge--on' : 'passstate__badge--off'"
+                :class="
+                  keyItem.encrypted ? 'passstate__badge--on' : 'passstate__badge--off'
+                "
               >
-                {{ keyItem.encrypted ? "protégée par une passphrase" : "sans passphrase" }}
+                {{
+                  keyItem.encrypted ? "protégée par une passphrase" : "sans passphrase"
+                }}
               </span>
             </div>
 
@@ -320,18 +370,38 @@ function submitAgent(): void {
                   class="mono"
                   placeholder="••••••••"
                 />
-                <button type="button" class="field__eye" title="Afficher" @click="showPass = !showPass">
+                <button
+                  type="button"
+                  class="field__eye"
+                  title="Afficher"
+                  @click="showPass = !showPass"
+                >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z" stroke="currentColor" stroke-width="1.3" />
-                    <circle cx="8" cy="8" r="1.7" stroke="currentColor" stroke-width="1.3" />
+                    <path
+                      d="M1.6 8s2.4-4 6.4-4 6.4 4 6.4 4-2.4 4-6.4 4S1.6 8 1.6 8z"
+                      stroke="currentColor"
+                      stroke-width="1.3"
+                    />
+                    <circle
+                      cx="8"
+                      cy="8"
+                      r="1.7"
+                      stroke="currentColor"
+                      stroke-width="1.3"
+                    />
                   </svg>
                 </button>
               </div>
               <div v-if="strength" class="gauge">
                 <div class="gauge__track">
-                  <div class="gauge__fill" :style="{ width: strength.pct + '%', background: strength.color }" />
+                  <div
+                    class="gauge__fill"
+                    :style="{ width: strength.pct + '%', background: strength.color }"
+                  />
                 </div>
-                <span class="gauge__label" :style="{ color: strength.color }">{{ strength.label }}</span>
+                <span class="gauge__label" :style="{ color: strength.color }">{{
+                  strength.label
+                }}</span>
               </div>
             </div>
 
@@ -350,7 +420,9 @@ function submitAgent(): void {
           </div>
 
           <footer class="dialog__foot">
-            <span class="foot__hint">Opération réalisée par <code>ssh-keygen -p</code></span>
+            <span class="foot__hint"
+              >Opération réalisée par <code>ssh-keygen -p</code></span
+            >
             <div class="dialog__cta">
               <button type="button" class="btn" @click="emit('close')">Annuler</button>
               <button type="button" class="btn btn--primary" @click="submitPassphrase">
@@ -391,7 +463,9 @@ function submitAgent(): void {
   transition: opacity 0.12s ease-out;
 }
 .dlg-enter-active .dialog {
-  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1), opacity 0.18s ease-out;
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.3, 1),
+    opacity 0.18s ease-out;
 }
 .dlg-enter-from {
   opacity: 0;
@@ -484,7 +558,9 @@ function submitAgent(): void {
   font-weight: 500;
   color: var(--g-t2);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
 }
 
 .tabs__btn--on {
@@ -542,7 +618,9 @@ function submitAgent(): void {
   resize: vertical;
   outline: none;
   box-sizing: border-box;
-  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+  transition:
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
 .editor--short {
@@ -671,7 +749,9 @@ function submitAgent(): void {
   outline: none;
   width: 100%;
   box-sizing: border-box;
-  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+  transition:
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
 .field input.mono {
