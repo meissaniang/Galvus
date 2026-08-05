@@ -5,6 +5,45 @@ projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+## [0.2.0] — 2026-08-02
+
+Les hôtes du `~/.ssh/config` deviennent des serveurs à part entière, et la
+configuration peut être sauvegardée ou transportée.
+
+### Ajouté
+
+- **Hôtes du fichier de configuration au même rang que les autres** : même
+  carte, mêmes groupes, mêmes actions. Ils acceptent désormais un groupe, une
+  couleur, des tags et le statut favori, conservés dans un commentaire
+  `# galvus:` au-dessus du bloc — invisible pour OpenSSH, et qui suit le fichier
+  lors d'une sauvegarde.
+- **Création directe dans `~/.ssh/config`** : un sélecteur d'emplacement permet
+  de choisir entre la base chiffrée et le fichier de configuration.
+- **Déplacement entre les deux emplacements** depuis le dialog d'édition, sans
+  ressaisie.
+- **Sauvegarde et restauration** de la configuration dans un fichier unique
+  (Paramètres › Avancé) : serveurs, hôtes du fichier de configuration, tunnels
+  et préférences. Aucun secret n'y figure — ni clé privée, ni passphrase.
+  L'import est additif et n'écrase jamais une entrée existante.
+- **Installation par Homebrew** sur macOS, qui lève la mise en quarantaine et
+  évite l'avertissement au premier lancement.
+
+### Modifié
+
+- Le tri s'applique aussi aux hôtes du fichier de configuration.
+- Les installeurs portent leur système dans leur nom
+  (`Galvus_0.2.0_x64-setup-windows.exe`).
+
+### Corrigé
+
+- Les contrôles des barres d'outils ne répondaient plus : la zone de
+  déplacement de fenêtre captait les clics destinés aux menus et boutons.
+- Le déplacement de la fenêtre, inopérant avec la barre de titre intégrée.
+- Compilation sur Windows et Linux, impossible car le coffre natif était figé
+  sur l'implémentation macOS.
+- Message trompeur « Galvus est endommagé » sur macOS : la marche à suivre est
+  désormais documentée.
+
 ## [0.1.0] — 2026-08-02
 
 Première version publique.
@@ -28,5 +67,6 @@ Première version publique.
 - **Journalisation** avec rotation des fichiers.
 - Interfaces de synchronisation (phase 2), sans implémentation réseau.
 
-[Non publié]: https://github.com/meissaniang/Galvus/compare/v0.1.0...HEAD
+[Non publié]: https://github.com/meissaniang/Galvus/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/meissaniang/Galvus/releases/tag/v0.2.0
 [0.1.0]: https://github.com/meissaniang/Galvus/releases/tag/v0.1.0

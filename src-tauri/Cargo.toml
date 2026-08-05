@@ -1,6 +1,6 @@
 [package]
 name = "galvus"
-version = "0.1.0"
+version = "0.2.0"
 description = "Galvus — client SSH desktop moderne, open source"
 authors = ["Meissa Niang"]
 license = "MIT"
