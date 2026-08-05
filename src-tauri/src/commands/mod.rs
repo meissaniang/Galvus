@@ -12,6 +12,12 @@ pub fn list_hosts() -> Result<Vec<Host>, AppError> {
     crate::ssh::config::list_hosts()
 }
 
+/// Ajoute une entrée au `~/.ssh/config`.
+#[tauri::command]
+pub fn config_host_create(input: ConfigHostInput) -> Result<(), AppError> {
+    crate::ssh::config::create_host(&input)
+}
+
 /// Met à jour (ou renomme) une entrée du `~/.ssh/config`.
 #[tauri::command]
 pub fn config_host_update(alias: String, input: ConfigHostInput) -> Result<(), AppError> {

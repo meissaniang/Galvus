@@ -10,6 +10,11 @@ export const hostsRepository = {
     return invoke<Host[]>("list_hosts");
   },
 
+  /** Ajoute une entrée au fichier de config. */
+  create(input: ConfigHostInput): Promise<void> {
+    return invoke<void>("config_host_create", { input });
+  },
+
   /** Met à jour (ou renomme) une entrée du fichier de config. */
   update(alias: string, input: ConfigHostInput): Promise<void> {
     return invoke<void>("config_host_update", { alias, input });

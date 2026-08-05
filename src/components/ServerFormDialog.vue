@@ -1,20 +1,39 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from "vue";
-import type { Server, ServerInput } from "@/types/ssh";
+import { computed, reactive, ref, watch } from "vue";
+import type { ServerItem, ServerSource } from "@/types/ssh";
 import { pickFile } from "@/services/filePicker";
 
 /**
- * Dialog « Nouveau / Éditer serveur » — fidèle à « ScreenServers.dc.html » :
- * 540px radius 14, grille 2 colonnes, champs surface-2, chips de tags,
- * swatches de couleur du DS, toggle Favori, note de confidentialité.
+ * Dialog « Nouveau / Éditer serveur » — fidèle à « ScreenServers.dc.html ».
+ *
+ * Il sert les deux origines : base chiffrée et `~/.ssh/config`. À la création,
+ * un sélecteur permet de choisir l'emplacement ; à l'édition il est figé, un
+ * serveur ne migrant pas d'une origine à l'autre.
  */
 const props = defineProps<{
   open: boolean;
-  server: Server | null;
+  item: ServerItem | null;
   groups?: string[];
   defaultGroup?: string | null;
+  defaultSource?: ServerSource;
 }>();
-const emit = defineEmits<{ save: [input: ServerInput]; close: [] }>();
+
+export interface ServerFormResult {
+  source: ServerSource;
+  id: number | null;
+  originalAlias: string | null;
+  name: string;
+  hostname: string;
+  port: number;
+  username: string | null;
+  identityFile: string | null;
+  color: string | null;
+  favorite: boolean;
+  tags: string[];
+  group: string | null;
+}
+
+const emit = defineEmits<{ save: [result: ServerFormResult]; close: [] }>();
 
 /** Couleurs de pastille du design system. */
 const SWATCHES = [
@@ -27,24 +46,27 @@ const SWATCHES = [
   "#7B8CA6",
 ];
 
-function emptyForm(): ServerInput {
-  return {
-    name: "",
-    hostname: "",
-    port: 22,
-    username: null,
-    identityFile: null,
-    color: null,
-    favorite: false,
-    tags: [],
-    group: null,
-  };
-}
-
-const form = reactive<ServerInput>(emptyForm());
+const source = ref<ServerSource>("local");
+const form = reactive({
+  name: "",
+  hostname: "",
+  port: 22,
+  username: "" as string | null,
+  identityFile: "" as string | null,
+  color: null as string | null,
+  favorite: false,
+  group: "" as string | null,
+});
 const tags = ref<string[]>([]);
 const tagDraft = ref("");
 const submitted = ref(false);
+
+const isEdit = computed(() => props.item !== null);
+
+/** Dans le fichier de config, le nom EST l'alias : pas d'espace autorisé. */
+const nameHasSpace = computed(
+  () => source.value === "config" && form.name.trim().includes(" "),
+);
 
 watch(
   () => props.open,
@@ -52,32 +74,26 @@ watch(
     if (!open) return;
     submitted.value = false;
     tagDraft.value = "";
-    const source = props.server;
-    Object.assign(
-      form,
-      source
-        ? {
-            name: source.name,
-            hostname: source.hostname,
-            port: source.port,
-            username: source.username,
-            identityFile: source.identityFile,
-            color: source.color,
-            favorite: source.favorite,
-            tags: [...source.tags],
-            group: source.group,
-          }
-        : { ...emptyForm(), group: props.defaultGroup ?? null },
-    );
-    tags.value = source ? [...source.tags] : [];
+    const item = props.item;
+
+    source.value = item?.source ?? props.defaultSource ?? "local";
+    Object.assign(form, {
+      name: item?.name ?? "",
+      hostname: item?.hostname ?? "",
+      port: item?.port ?? 22,
+      username: item?.username ?? "",
+      identityFile: item?.identityFile ?? "",
+      color: item?.color ?? null,
+      favorite: item?.favorite ?? false,
+      group: item?.group ?? props.defaultGroup ?? "",
+    });
+    tags.value = item ? [...item.tags] : [];
   },
 );
 
 function addTag(): void {
   const value = tagDraft.value.trim().replace(/,$/, "");
-  if (value && !tags.value.includes(value)) {
-    tags.value.push(value);
-  }
+  if (value && !tags.value.includes(value)) tags.value.push(value);
   tagDraft.value = "";
 }
 
@@ -102,6 +118,7 @@ async function browseKey(): Promise<void> {
 const isValid = () =>
   form.name.trim() !== "" &&
   form.hostname.trim() !== "" &&
+  !nameHasSpace.value &&
   form.port >= 1 &&
   form.port <= 65535;
 
@@ -110,6 +127,9 @@ function submit(): void {
   addTag();
   if (!isValid()) return;
   emit("save", {
+    source: source.value,
+    id: props.item?.id ?? null,
+    originalAlias: props.item?.alias ?? null,
     name: form.name.trim(),
     hostname: form.hostname.trim(),
     port: Number(form.port),
@@ -152,9 +172,15 @@ function submit(): void {
           </div>
           <div class="dialog__titles">
             <div class="dialog__title">
-              {{ server ? "Éditer le serveur" : "Nouveau serveur" }}
+              {{ isEdit ? "Éditer le serveur" : "Nouveau serveur" }}
             </div>
-            <div class="dialog__subtitle">Stocké localement, chiffré au repos</div>
+            <div class="dialog__subtitle">
+              {{
+                source === "config"
+                  ? "Enregistré dans ~/.ssh/config"
+                  : "Stocké localement, chiffré au repos"
+              }}
+            </div>
           </div>
           <button class="dialog__close" title="Fermer" @click="emit('close')">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -169,10 +195,47 @@ function submit(): void {
         </header>
 
         <form class="dialog__body" @submit.prevent="submit">
+          <div v-if="!isEdit" class="field field--wide">
+            <label>Emplacement</label>
+            <div class="segmented">
+              <button
+                type="button"
+                class="segmented__btn"
+                :class="{ 'segmented__btn--on': source === 'local' }"
+                @click="source = 'local'"
+              >
+                Base chiffrée
+              </button>
+              <button
+                type="button"
+                class="segmented__btn"
+                :class="{ 'segmented__btn--on': source === 'config' }"
+                @click="source = 'config'"
+              >
+                ~/.ssh/config
+              </button>
+            </div>
+            <span class="field__hint">
+              {{
+                source === "config"
+                  ? "Portable et sauvegardable : l'entrée est lisible par ssh, scp et tout autre client."
+                  : "Base locale chiffrée, clé dans le trousseau du système."
+              }}
+            </span>
+          </div>
+
           <div class="field field--wide">
-            <label>Nom</label>
-            <input v-model="form.name" type="text" placeholder="db-replica-02" />
+            <label>{{ source === "config" ? "Alias (Host)" : "Nom" }}</label>
+            <input
+              v-model="form.name"
+              type="text"
+              :class="{ mono: source === 'config' }"
+              :placeholder="source === 'config' ? 'vps-prod' : 'db-replica-02'"
+            />
             <span v-if="submitted && !form.name.trim()" class="field__err">Requis</span>
+            <span v-else-if="submitted && nameHasSpace" class="field__err">
+              Un seul mot, sans espace
+            </span>
           </div>
 
           <div class="field">
@@ -201,12 +264,7 @@ function submit(): void {
 
           <div class="field">
             <label>Utilisateur</label>
-            <input
-              v-model="form.username"
-              type="text"
-              class="mono"
-              placeholder="postgres"
-            />
+            <input v-model="form.username" type="text" class="mono" placeholder="root" />
           </div>
 
           <div class="field">
@@ -401,10 +459,12 @@ function submit(): void {
   align-items: center;
   justify-content: center;
   color: var(--g-accent);
+  flex-shrink: 0;
 }
 
 .dialog__titles {
   flex: 1;
+  min-width: 0;
 }
 
 .dialog__title {
@@ -430,6 +490,7 @@ function submit(): void {
   color: var(--g-t3);
   background: var(--g-s2);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .dialog__close:hover {
@@ -458,15 +519,50 @@ function submit(): void {
 }
 
 .field label,
-.field--wide label,
 .swatches label {
   font-size: 11.5px;
   font-weight: 600;
   color: var(--g-t2);
 }
 
-.field input,
-.field--wide input {
+.field__hint {
+  font-size: 11px;
+  color: var(--g-t3);
+}
+
+.segmented {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
+  border-radius: 10px;
+}
+
+.segmented__btn {
+  flex: 1;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--g-t2);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.segmented__btn--on {
+  background: var(--g-s1);
+  color: var(--g-t1);
+  font-weight: 600;
+  box-shadow: var(--g-sh1);
+}
+
+.field input {
   height: 34px;
   border-radius: 9px;
   background: var(--g-s2);
@@ -483,14 +579,12 @@ function submit(): void {
   width: 100%;
 }
 
-.field input.mono,
-.field--wide input.mono {
+.field input.mono {
   font-family: var(--g-font-mono);
   font-size: 12.5px;
 }
 
 .field input:focus,
-.field--wide input:focus,
 .tags:focus-within {
   border-color: var(--g-accent);
   box-shadow: 0 0 0 3px var(--g-accent-ring);
@@ -552,13 +646,10 @@ function submit(): void {
 }
 
 .tags__chip {
-  margin: 3px 0;
-}
-
-.tags__chip {
   display: flex;
   align-items: center;
   gap: 5px;
+  margin: 3px 0;
   font-size: 10.5px;
   font-weight: 500;
   color: var(--g-t1);

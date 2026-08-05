@@ -34,6 +34,18 @@ export const useServersStore = defineStore("servers", () => {
     }
   }
 
+  /** Ajoute une entrée au ~/.ssh/config puis recharge la liste. */
+  async function create(input: ConfigHostInput): Promise<void> {
+    error.value = null;
+    try {
+      await hostsRepository.create(input);
+      await load();
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
+    }
+  }
+
   /** Met à jour une entrée du ~/.ssh/config puis recharge la liste. */
   async function update(alias: string, input: ConfigHostInput): Promise<void> {
     error.value = null;
@@ -58,5 +70,5 @@ export const useServersStore = defineStore("servers", () => {
     }
   }
 
-  return { hosts, loading, error, query, filteredHosts, load, update, remove };
+  return { hosts, loading, error, query, filteredHosts, load, create, update, remove };
 });

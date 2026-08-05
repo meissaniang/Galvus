@@ -11,6 +11,11 @@ export interface Host {
   port: number | null;
   identityFile: string | null;
   proxyJump: string | null;
+  /** Métadonnées Galvus, stockées en commentaire dans le fichier. */
+  group: string | null;
+  color: string | null;
+  tags: string[];
+  favorite: boolean;
 }
 
 /** Un serveur enregistré par l'utilisateur (persisté dans la base chiffrée). */
@@ -48,6 +53,35 @@ export interface ConfigHostInput {
   port: number | null;
   identityFile: string | null;
   proxyJump: string | null;
+  group: string | null;
+  color: string | null;
+  tags: string[];
+  favorite: boolean;
+}
+
+/** Origine d'un serveur affiché : base chiffrée ou fichier de configuration. */
+export type ServerSource = "local" | "config";
+
+/**
+ * Vue unifiée d'un serveur, quelle que soit son origine. Permet d'afficher et
+ * de manipuler de la même façon les entrées de la base et celles du
+ * `~/.ssh/config`.
+ */
+export interface ServerItem {
+  key: string;
+  source: ServerSource;
+  /** Identifiant en base (source « local ») ou alias (source « config »). */
+  id: number | null;
+  alias: string;
+  name: string;
+  hostname: string;
+  port: number;
+  username: string | null;
+  identityFile: string | null;
+  color: string | null;
+  favorite: boolean;
+  tags: string[];
+  group: string | null;
 }
 
 /** Type de tunnel SSH. */

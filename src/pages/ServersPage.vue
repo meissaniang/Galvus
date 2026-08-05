@@ -6,18 +6,19 @@ import { useServersStore } from "@/stores/servers";
 import { useMyServersStore } from "@/stores/myServers";
 import { useConnectionsStore } from "@/stores/connections";
 import { useSettingsStore } from "@/stores/settings";
-import HostCard from "@/components/HostCard.vue";
 import ServerCard from "@/components/ServerCard.vue";
-import ServerFormDialog from "@/components/ServerFormDialog.vue";
-import ConfigHostDialog from "@/components/ConfigHostDialog.vue";
-import type { ConfigHostInput, Host, Server, ServerInput } from "@/types/ssh";
+import ServerFormDialog, {
+  type ServerFormResult,
+} from "@/components/ServerFormDialog.vue";
+import type { Host, Server, ServerItem, ServerSource } from "@/types/ssh";
 import { shortcut } from "@/utils/platform";
 
 /**
- * Écran Serveurs — implémentation fidèle de « ScreenServers.dc.html » :
- * topbar (recherche ⌘K, tri, bascule grille/liste, Nouveau serveur),
- * groupes repliables avec compteurs, tuiles avec actions au survol,
- * carte « Ajouter à… », section ~/.ssh/config en lecture seule.
+ * Écran Serveurs — implémentation fidèle de « ScreenServers.dc.html ».
+ *
+ * Les entrées de la base chiffrée et celles du `~/.ssh/config` sont ramenées à
+ * une vue commune (`ServerItem`) : même carte, mêmes groupes, mêmes actions.
+ * Seule une pastille « config » distingue l'origine.
  */
 const hostsStore = useServersStore();
 const myServers = useMyServersStore();
@@ -32,120 +33,14 @@ const { serversView, serversSort } = storeToRefs(settings);
 const search = ref("");
 const searchInput = ref<HTMLInputElement | null>(null);
 const collapsed = reactive(new Set<string>());
-const configCollapsed = ref(false);
 
-function match(values: (string | null)[]): boolean {
-  const q = search.value.trim().toLowerCase();
-  if (!q) return true;
-  return values
-    .filter((v): v is string => Boolean(v))
-    .some((v) => v.toLowerCase().includes(q));
-}
-
-const sortedServers = computed<Server[]>(() => {
-  const list = servers.value.filter((s) =>
-    match([s.name, s.hostname, s.username, ...s.tags]),
-  );
-  const sorted = [...list];
-  if (serversSort.value === "favorite") {
-    sorted.sort(
-      (a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name),
-    );
-  } else if (serversSort.value === "recent") {
-    sorted.sort((a, b) => b.id - a.id);
-  } else {
-    sorted.sort((a, b) => a.name.localeCompare(b.name));
-  }
-  return sorted;
-});
-
-/** Groupes ordonnés : nommés d'abord (alpha), non groupés en dernier. */
-const groupedServers = computed<[string, Server[]][]>(() => {
-  const groups = new Map<string, Server[]>();
-  for (const server of sortedServers.value) {
-    const key = server.group ?? "";
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(server);
-  }
-  return [...groups.entries()].sort(([a], [b]) => {
-    if (a === "") return 1;
-    if (b === "") return -1;
-    return a.localeCompare(b);
-  });
-});
-
-const groupNames = computed(() =>
-  [
-    ...new Set(servers.value.map((s) => s.group).filter((g): g is string => Boolean(g))),
-  ].sort(),
-);
-
-/** Hôtes du config : filtrés puis triés selon le même critère. */
-const filteredHosts = computed<Host[]>(() => {
-  const list = hosts.value.filter((h) => match([h.alias, h.hostname, h.user]));
-  const sorted = [...list];
-  if (serversSort.value === "recent") {
-    sorted.reverse();
-  } else {
-    sorted.sort((a, b) => a.alias.localeCompare(b.alias));
-  }
-  return sorted;
-});
-
-/** Libellés des sessions ouvertes → point vert « connecté » sur les cartes. */
-const connectedLabels = computed(
-  () => new Set(connections.tabs.flatMap((t) => t.panes.map((p) => p.label))),
-);
-
-function toggleGroup(name: string): void {
-  if (collapsed.has(name)) collapsed.delete(name);
-  else collapsed.add(name);
-}
-
-// --- Connexions ---
-function connectHost(host: Host): void {
-  connections.open(host.alias, [host.alias]);
-  router.push({ name: "terminal" });
-}
-function connectServer(server: Server): void {
-  const args: string[] = [];
-  if (server.port !== 22) args.push("-p", String(server.port));
-  if (server.identityFile) args.push("-i", server.identityFile);
-  args.push(server.username ? `${server.username}@${server.hostname}` : server.hostname);
-  connections.open(server.name, args);
-  router.push({ name: "terminal" });
-}
-
-// --- CRUD ---
-const dialogOpen = ref(false);
-const editingServer = ref<Server | null>(null);
-const dialogGroup = ref<string | null>(null);
-
-function openNew(group: string | null = null): void {
-  editingServer.value = null;
-  dialogGroup.value = group;
-  dialogOpen.value = true;
-}
-function openEdit(server: Server): void {
-  editingServer.value = server;
-  dialogGroup.value = null;
-  dialogOpen.value = true;
-}
-async function onSave(input: ServerInput): Promise<void> {
-  if (editingServer.value) {
-    await myServers.update(editingServer.value.id, input);
-  } else {
-    await myServers.create(input);
-  }
-  dialogOpen.value = false;
-}
-async function onRemove(server: Server): Promise<void> {
-  if (window.confirm(`Supprimer « ${server.name} » ?`)) {
-    await myServers.remove(server.id);
-  }
-}
-function toInput(s: Server): ServerInput {
+// --- Normalisation des deux sources ---
+function fromServer(s: Server): ServerItem {
   return {
+    key: `local:${s.id}`,
+    source: "local",
+    id: s.id,
+    alias: s.name,
     name: s.name,
     hostname: s.hostname,
     port: s.port,
@@ -157,33 +52,181 @@ function toInput(s: Server): ServerInput {
     group: s.group,
   };
 }
-async function toggleFavorite(server: Server): Promise<void> {
-  await myServers.update(server.id, { ...toInput(server), favorite: !server.favorite });
+
+function fromHost(h: Host): ServerItem {
+  return {
+    key: `config:${h.alias}`,
+    source: "config",
+    id: null,
+    alias: h.alias,
+    name: h.alias,
+    hostname: h.hostname ?? h.alias,
+    port: h.port ?? 22,
+    username: h.user,
+    identityFile: h.identityFile,
+    color: h.color,
+    favorite: h.favorite,
+    tags: h.tags,
+    group: h.group,
+  };
 }
 
-// --- Édition des hôtes ~/.ssh/config ---
-const hostDialogOpen = ref(false);
-const editingHost = ref<Host | null>(null);
+const allItems = computed<ServerItem[]>(() => [
+  ...servers.value.map(fromServer),
+  ...hosts.value.map(fromHost),
+]);
 
-function openEditHost(host: Host): void {
-  editingHost.value = host;
-  hostDialogOpen.value = true;
+function match(values: (string | null)[]): boolean {
+  const q = search.value.trim().toLowerCase();
+  if (!q) return true;
+  return values
+    .filter((v): v is string => Boolean(v))
+    .some((v) => v.toLowerCase().includes(q));
 }
 
-async function onSaveHost(input: ConfigHostInput): Promise<void> {
-  if (!editingHost.value) return;
+const sortedItems = computed<ServerItem[]>(() => {
+  const list = allItems.value.filter((i) =>
+    match([i.name, i.hostname, i.username, ...i.tags]),
+  );
+  const sorted = [...list];
+  if (serversSort.value === "favorite") {
+    sorted.sort(
+      (a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name),
+    );
+  } else if (serversSort.value === "recent") {
+    // Les entrées de la base d'abord, les plus récentes en tête.
+    sorted.sort((a, b) => (b.id ?? -1) - (a.id ?? -1));
+  } else {
+    sorted.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  return sorted;
+});
+
+/** Groupes ordonnés : nommés d'abord (alpha), non groupés en dernier. */
+const grouped = computed<[string, ServerItem[]][]>(() => {
+  const groups = new Map<string, ServerItem[]>();
+  for (const item of sortedItems.value) {
+    const key = item.group ?? "";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(item);
+  }
+  return [...groups.entries()].sort(([a], [b]) => {
+    if (a === "") return 1;
+    if (b === "") return -1;
+    return a.localeCompare(b);
+  });
+});
+
+const groupNames = computed(() =>
+  [
+    ...new Set(allItems.value.map((i) => i.group).filter((g): g is string => Boolean(g))),
+  ].sort(),
+);
+
+/** Libellés des sessions ouvertes → point vert « connecté » sur les cartes. */
+const connectedLabels = computed(
+  () => new Set(connections.tabs.flatMap((t) => t.panes.map((p) => p.label))),
+);
+
+function toggleGroup(name: string): void {
+  if (collapsed.has(name)) collapsed.delete(name);
+  else collapsed.add(name);
+}
+
+// --- Connexion ---
+function connect(item: ServerItem): void {
+  const args: string[] =
+    item.source === "config"
+      ? // OpenSSH résout lui-même les options de l'alias.
+        [item.alias]
+      : [
+          ...(item.port !== 22 ? ["-p", String(item.port)] : []),
+          ...(item.identityFile ? ["-i", item.identityFile] : []),
+          item.username ? `${item.username}@${item.hostname}` : item.hostname,
+        ];
+  connections.open(item.name, args);
+  router.push({ name: "terminal" });
+}
+
+// --- Création / édition ---
+const dialogOpen = ref(false);
+const editingItem = ref<ServerItem | null>(null);
+const dialogGroup = ref<string | null>(null);
+const dialogSource = ref<ServerSource>("local");
+
+function openNew(group: string | null = null): void {
+  editingItem.value = null;
+  dialogGroup.value = group;
+  dialogSource.value = "local";
+  dialogOpen.value = true;
+}
+
+function openEdit(item: ServerItem): void {
+  editingItem.value = item;
+  dialogGroup.value = null;
+  dialogOpen.value = true;
+}
+
+async function onSave(result: ServerFormResult): Promise<void> {
   try {
-    await hostsStore.update(editingHost.value.alias, input);
-    hostDialogOpen.value = false;
+    if (result.source === "config") {
+      const input = {
+        alias: result.name,
+        hostname: result.hostname,
+        user: result.username,
+        port: result.port,
+        identityFile: result.identityFile,
+        proxyJump: null,
+        group: result.group,
+        color: result.color,
+        tags: result.tags,
+        favorite: result.favorite,
+      };
+      if (result.originalAlias) await hostsStore.update(result.originalAlias, input);
+      else await hostsStore.create(input);
+    } else {
+      const input = {
+        name: result.name,
+        hostname: result.hostname,
+        port: result.port,
+        username: result.username,
+        identityFile: result.identityFile,
+        color: result.color,
+        favorite: result.favorite,
+        tags: result.tags,
+        group: result.group,
+      };
+      if (result.id !== null) await myServers.update(result.id, input);
+      else await myServers.create(input);
+    }
+    dialogOpen.value = false;
   } catch {
-    /* erreur affichée via hostsError */
+    /* erreur affichée par le store correspondant */
   }
 }
 
-async function onRemoveHost(host: Host): Promise<void> {
-  if (window.confirm(`Supprimer « ${host.alias} » de ~/.ssh/config ?`)) {
-    await hostsStore.remove(host.alias);
-  }
+async function onRemove(item: ServerItem): Promise<void> {
+  const where = item.source === "config" ? " de ~/.ssh/config" : "";
+  if (!window.confirm(`Supprimer « ${item.name} »${where} ?`)) return;
+  if (item.source === "config") await hostsStore.remove(item.alias);
+  else if (item.id !== null) await myServers.remove(item.id);
+}
+
+async function toggleFavorite(item: ServerItem): Promise<void> {
+  await onSave({
+    source: item.source,
+    id: item.id,
+    originalAlias: item.source === "config" ? item.alias : null,
+    name: item.name,
+    hostname: item.hostname,
+    port: item.port,
+    username: item.username,
+    identityFile: item.identityFile,
+    color: item.color,
+    favorite: !item.favorite,
+    tags: item.tags,
+    group: item.group,
+  });
 }
 
 /** ⌘K / Ctrl+K : focus sur la recherche. */
@@ -202,11 +245,9 @@ onMounted(() => {
 });
 onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 
-function addressOf(server: Server): string {
-  const target = server.username
-    ? `${server.username}@${server.hostname}`
-    : server.hostname;
-  return `${target}:${server.port}`;
+function addressOf(item: ServerItem): string {
+  const target = item.username ? `${item.username}@${item.hostname}` : item.hostname;
+  return `${target}:${item.port}`;
 }
 </script>
 
@@ -295,13 +336,9 @@ function addressOf(server: Server): string {
     <!-- Contenu défilant -->
     <div class="content">
       <p v-if="serversError" class="state state--error">{{ serversError }}</p>
+      <p v-if="hostsError" class="state state--error">{{ hostsError }}</p>
 
-      <!-- Groupes de serveurs -->
-      <section
-        v-for="[group, list] in groupedServers"
-        :key="group || '__none'"
-        class="group"
-      >
+      <section v-for="[group, list] in grouped" :key="group || '__none'" class="group">
         <header class="group__head">
           <button
             class="group__chevron"
@@ -317,7 +354,7 @@ function addressOf(server: Server): string {
               />
             </svg>
           </button>
-          <span class="group__name">{{ group || "Mes serveurs" }}</span>
+          <span class="group__name">{{ group || "Sans groupe" }}</span>
           <span class="group__count">{{ list.length }}</span>
           <span class="group__line" />
         </header>
@@ -326,11 +363,11 @@ function addressOf(server: Server): string {
           <!-- Vue grille -->
           <div v-if="serversView === 'grid'" class="grid">
             <ServerCard
-              v-for="server in list"
-              :key="server.id"
-              :server="server"
-              :connected="connectedLabels.has(server.name)"
-              @connect="connectServer"
+              v-for="item in list"
+              :key="item.key"
+              :item="item"
+              :connected="connectedLabels.has(item.name)"
+              @connect="connect"
               @edit="openEdit"
               @remove="onRemove"
               @toggle-favorite="toggleFavorite"
@@ -351,31 +388,30 @@ function addressOf(server: Server): string {
           <!-- Vue liste -->
           <div v-else class="rows">
             <div
-              v-for="server in list"
-              :key="server.id"
+              v-for="item in list"
+              :key="item.key"
               class="row"
-              @dblclick="connectServer(server)"
+              @dblclick="connect(item)"
             >
-              <span
-                class="row__ava"
-                :style="{ background: server.color ?? 'var(--g-s3)' }"
-                >{{ server.name.slice(0, 2).toUpperCase() }}</span
-              >
-              <span class="row__name">
-                {{ server.name }}
-                <span v-if="connectedLabels.has(server.name)" class="row__dot" />
+              <span class="row__ava" :style="{ background: item.color ?? 'var(--g-s3)' }">
+                {{ item.name.slice(0, 2).toUpperCase() }}
               </span>
-              <span class="row__addr">{{ addressOf(server) }}</span>
+              <span class="row__name">
+                {{ item.name }}
+                <span v-if="connectedLabels.has(item.name)" class="row__dot" />
+                <span v-if="item.source === 'config'" class="row__origin">config</span>
+              </span>
+              <span class="row__addr">{{ addressOf(item) }}</span>
               <span class="row__tags">
-                <span v-for="tag in server.tags" :key="tag" class="row__tag">{{
+                <span v-for="tag in item.tags" :key="tag" class="row__tag">{{
                   tag
                 }}</span>
               </span>
               <span class="row__actions">
-                <button class="row__connect" @click.stop="connectServer(server)">
+                <button class="row__connect" @click.stop="connect(item)">
                   Connecter
                 </button>
-                <button class="row__icon" title="Éditer" @click.stop="openEdit(server)">
+                <button class="row__icon" title="Éditer" @click.stop="openEdit(item)">
                   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z"
@@ -388,7 +424,7 @@ function addressOf(server: Server): string {
                 <button
                   class="row__icon row__icon--danger"
                   title="Supprimer"
-                  @click.stop="onRemove(server)"
+                  @click.stop="onRemove(item)"
                 >
                   <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                     <path
@@ -405,66 +441,8 @@ function addressOf(server: Server): string {
         </template>
       </section>
 
-      <!-- Section ~/.ssh/config -->
-      <section v-if="filteredHosts.length > 0 || hostsError" class="group">
-        <header class="group__head">
-          <button
-            class="group__chevron"
-            :class="{ 'group__chevron--closed': configCollapsed }"
-            @click="configCollapsed = !configCollapsed"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path
-                d="M3 4.6l3 3 3-3"
-                stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
-              />
-            </svg>
-          </button>
-          <span class="group__mono">~/.ssh/config</span>
-          <span class="group__lock">
-            <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
-              <rect
-                x="1.6"
-                y="4.4"
-                width="6.8"
-                height="4.4"
-                rx="1.2"
-                stroke="currentColor"
-                stroke-width="1.2"
-              />
-              <path
-                d="M3.4 4.4V3.2a1.6 1.6 0 013.2 0v1.2"
-                stroke="currentColor"
-                stroke-width="1.2"
-              />
-            </svg>
-            lecture seule
-          </span>
-          <span class="group__line" />
-          <span class="group__hint">{{ filteredHosts.length }} hôtes importés</span>
-        </header>
-
-        <p v-if="hostsError" class="state state--error">{{ hostsError }}</p>
-        <div v-else-if="!configCollapsed" class="grid grid--config">
-          <HostCard
-            v-for="host in filteredHosts"
-            :key="host.alias"
-            :host="host"
-            :connected="connectedLabels.has(host.alias)"
-            @click="connectHost(host)"
-            @edit="openEditHost"
-            @remove="onRemoveHost"
-          />
-        </div>
-      </section>
-
       <!-- État vide -->
-      <div
-        v-if="sortedServers.length === 0 && filteredHosts.length === 0 && !hostsLoading"
-        class="empty"
-      >
+      <div v-if="sortedItems.length === 0 && !hostsLoading" class="empty">
         <svg width="34" height="34" viewBox="0 0 18 18" fill="none">
           <rect
             x="2.5"
@@ -492,18 +470,12 @@ function addressOf(server: Server): string {
 
     <ServerFormDialog
       :open="dialogOpen"
-      :server="editingServer"
+      :item="editingItem"
       :groups="groupNames"
       :default-group="dialogGroup"
+      :default-source="dialogSource"
       @save="onSave"
       @close="dialogOpen = false"
-    />
-
-    <ConfigHostDialog
-      :open="hostDialogOpen"
-      :host="editingHost"
-      @save="onSaveHost"
-      @close="hostDialogOpen = false"
     />
   </section>
 </template>
@@ -704,13 +676,6 @@ function addressOf(server: Server): string {
   color: var(--g-t2);
 }
 
-.group__mono {
-  font-family: var(--g-font-mono);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--g-t2);
-}
-
 .group__count {
   font-family: var(--g-font-mono);
   font-size: 10.5px;
@@ -720,28 +685,10 @@ function addressOf(server: Server): string {
   border-radius: 6px;
 }
 
-.group__lock {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--g-t3);
-  background: var(--g-s2);
-  border: 1px solid var(--g-border);
-  padding: 2px 7px;
-  border-radius: 999px;
-}
-
 .group__line {
   flex: 1;
   height: 1px;
   background: var(--g-border);
-}
-
-.group__hint {
-  font-size: 11.5px;
-  color: var(--g-t3);
 }
 
 /* Grille responsive : 3 col ≥1140, 2 col ≥960, 1 col en dessous. */
@@ -761,10 +708,6 @@ function addressOf(server: Server): string {
   .grid {
     grid-template-columns: 1fr;
   }
-}
-
-.grid--config {
-  opacity: 0.72;
 }
 
 .addcard {
@@ -834,7 +777,7 @@ function addressOf(server: Server): string {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 180px;
+  width: 200px;
   font-size: 13px;
   font-weight: 600;
   color: var(--g-t1);
@@ -848,6 +791,16 @@ function addressOf(server: Server): string {
   height: 6px;
   border-radius: 999px;
   background: var(--g-success);
+}
+
+.row__origin {
+  font-family: var(--g-font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  color: var(--g-t3);
+  border: 1px solid var(--g-border);
+  padding: 0 5px;
+  border-radius: 5px;
 }
 
 .row__addr {

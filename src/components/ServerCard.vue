@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Server } from "@/types/ssh";
+import type { ServerItem } from "@/types/ssh";
 
 /**
- * Tuile serveur — fidèle à « ScreenServers.dc.html » :
- * pastille 40px (radius 11), nom + point de connexion, adresse mono,
- * tags en pilules ; au survol : surface-2 + anneau accent + translateY(-1px)
- * et les actions (Connecter / éditer / supprimer) remplacent les tags.
+ * Tuile serveur — fidèle à « ScreenServers.dc.html ». Elle rend indifféremment
+ * une entrée de la base chiffrée ou du `~/.ssh/config` : seule une pastille
+ * discrète signale l'origine.
+ *
+ * Au survol : surface-2 + anneau accent + translateY(-1px), et les actions
+ * remplacent les tags.
  */
-const props = defineProps<{ server: Server; connected?: boolean }>();
+const props = defineProps<{ item: ServerItem; connected?: boolean }>();
 const emit = defineEmits<{
-  connect: [server: Server];
-  edit: [server: Server];
-  remove: [server: Server];
-  toggleFavorite: [server: Server];
+  connect: [item: ServerItem];
+  edit: [item: ServerItem];
+  remove: [item: ServerItem];
+  toggleFavorite: [item: ServerItem];
 }>();
 
 /** Couleurs de pastille claires → texte encre foncée (règle AA du DS). */
@@ -26,9 +28,9 @@ const LIGHT_TILES: Record<string, string> = {
 };
 
 const accent = computed(() => {
-  if (props.server.color) return props.server.color;
+  if (props.item.color) return props.item.color;
   let hue = 0;
-  for (const ch of props.server.name) {
+  for (const ch of props.item.name) {
     hue = (hue * 31 + ch.charCodeAt(0)) % 360;
   }
   return `hsl(${hue} 65% 48%)`;
@@ -37,43 +39,49 @@ const accent = computed(() => {
 const tileFg = computed(() => LIGHT_TILES[accent.value.toLowerCase()] ?? "#ffffff");
 
 const initials = computed(() =>
-  props.server.name
+  props.item.name
     .replace(/[^a-zA-Z0-9]/g, "")
     .slice(0, 2)
     .toUpperCase(),
 );
 
 const address = computed(() => {
-  const target = props.server.username
-    ? `${props.server.username}@${props.server.hostname}`
-    : props.server.hostname;
-  return `${target}:${props.server.port}`;
+  const target = props.item.username
+    ? `${props.item.username}@${props.item.hostname}`
+    : props.item.hostname;
+  return `${target}:${props.item.port}`;
 });
 </script>
 
 <template>
-  <article class="tile" @dblclick="emit('connect', server)">
+  <article class="tile" @dblclick="emit('connect', item)">
     <div class="tile__ava" :style="{ background: accent, color: tileFg }">
       {{ initials }}
     </div>
 
     <div class="tile__body">
       <div class="tile__head">
-        <span class="tile__name">{{ server.name }}</span>
+        <span class="tile__name">{{ item.name }}</span>
         <span v-if="connected" class="tile__on" title="Session ouverte" />
+        <span
+          v-if="item.source === 'config'"
+          class="tile__origin"
+          title="Défini dans ~/.ssh/config"
+          >config</span
+        >
       </div>
       <div class="tile__addr" :title="address">{{ address }}</div>
 
       <div class="tile__meta">
         <div class="tile__tags">
-          <span v-for="tag in server.tags" :key="tag" class="tile__tag">{{ tag }}</span>
-          <span v-if="server.tags.length === 0" class="tile__notags">—</span>
+          <span v-for="tag in item.tags" :key="tag" class="tile__tag">{{ tag }}</span>
+          <span v-if="item.tags.length === 0" class="tile__notags">—</span>
         </div>
         <div class="tile__actions">
-          <button class="tile__connect" @click.stop="emit('connect', server)">
+          <button class="tile__connect" @click.stop="emit('connect', item)">
             Connecter
           </button>
-          <button class="tile__icon" title="Éditer" @click.stop="emit('edit', server)">
+          <button class="tile__icon" title="Éditer" @click.stop="emit('edit', item)">
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
               <path
                 d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z"
@@ -86,7 +94,7 @@ const address = computed(() => {
           <button
             class="tile__icon tile__icon--danger"
             title="Supprimer"
-            @click.stop="emit('remove', server)"
+            @click.stop="emit('remove', item)"
           >
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
               <path
@@ -103,19 +111,19 @@ const address = computed(() => {
 
     <button
       class="tile__star"
-      :class="{ 'tile__star--on': server.favorite }"
-      :title="server.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
-      @click.stop="emit('toggleFavorite', server)"
+      :class="{ 'tile__star--on': item.favorite }"
+      :title="item.favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+      @click.stop="emit('toggleFavorite', item)"
     >
       <svg
         width="15"
         height="15"
         viewBox="0 0 16 16"
-        :fill="server.favorite ? 'var(--g-warning)' : 'none'"
+        :fill="item.favorite ? 'var(--g-warning)' : 'none'"
       >
         <path
           d="M8 1.6l1.9 3.9 4.3.6-3.1 3 .74 4.3L8 11.4l-3.83 2 .74-4.3-3.1-3 4.3-.6z"
-          :stroke="server.favorite ? 'var(--g-warning)' : 'currentColor'"
+          :stroke="item.favorite ? 'var(--g-warning)' : 'currentColor'"
           stroke-width="1.2"
           stroke-linejoin="round"
         />
@@ -189,6 +197,16 @@ const address = computed(() => {
   height: 6px;
   border-radius: 999px;
   background: var(--g-success);
+  flex-shrink: 0;
+}
+
+.tile__origin {
+  font-family: var(--g-font-mono);
+  font-size: 9.5px;
+  color: var(--g-t3);
+  border: 1px solid var(--g-border);
+  padding: 0 5px;
+  border-radius: 5px;
   flex-shrink: 0;
 }
 
