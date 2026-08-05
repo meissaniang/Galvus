@@ -47,11 +47,17 @@ réimplémente pas le protocole SSH. Les métadonnées sont stockées dans une b
 
 ```bash
 brew tap meissaniang/galvus https://github.com/meissaniang/Galvus
+brew trust meissaniang/galvus
 brew install --cask galvus
 ```
 
-C'est la méthode la plus simple : Homebrew installe l'application, lève lui-même
-la mise en quarantaine et gère les mises à jour avec `brew upgrade --cask galvus`.
+Homebrew installe l'application, lève lui-même la mise en quarantaine — vous
+n'aurez donc aucun avertissement au lancement — et gère les mises à jour avec
+`brew upgrade --cask galvus`.
+
+L'étape `brew trust` est exigée par Homebrew pour tout dépôt tiers : elle
+confirme que vous acceptez d'exécuter les instructions d'installation de ce
+dépôt.
 
 ### Téléchargement direct
 
