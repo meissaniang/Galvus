@@ -9,7 +9,7 @@ jobs:
   frontend:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # La version de pnpm est lue depuis le champ packageManager du package.json.
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -29,7 +29,7 @@ jobs:
   rust:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rustfmt
