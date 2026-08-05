@@ -12,6 +12,12 @@ cask "galvus" do
   desc "Client SSH desktop moderne, open source et 100 % local"
   homepage "https://github.com/meissaniang/Galvus"
 
+  # Permet à Homebrew de repérer la dernière release publiée sur GitHub.
+  livecheck do
+    url :url
+    strategy :github_latest
+  end
+
   app "Galvus.app"
 
   # L'application n'est pas signée par un certificat Apple : sans cela, macOS
