@@ -20,6 +20,8 @@ const props = defineProps<{
 
 export interface ServerFormResult {
   source: ServerSource;
+  /** Origine avant édition : différente de `source` en cas de déplacement. */
+  previousSource: ServerSource | null;
   id: number | null;
   originalAlias: string | null;
   name: string;
@@ -62,6 +64,11 @@ const tagDraft = ref("");
 const submitted = ref(false);
 
 const isEdit = computed(() => props.item !== null);
+
+/** Vrai quand l'édition change l'emplacement : il faudra migrer l'entrée. */
+const isMoving = computed(
+  () => props.item !== null && props.item.source !== source.value,
+);
 
 /** Dans le fichier de config, le nom EST l'alias : pas d'espace autorisé. */
 const nameHasSpace = computed(
@@ -128,6 +135,7 @@ function submit(): void {
   if (!isValid()) return;
   emit("save", {
     source: source.value,
+    previousSource: props.item?.source ?? null,
     id: props.item?.id ?? null,
     originalAlias: props.item?.alias ?? null,
     name: form.name.trim(),
@@ -195,7 +203,7 @@ function submit(): void {
         </header>
 
         <form class="dialog__body" @submit.prevent="submit">
-          <div v-if="!isEdit" class="field field--wide">
+          <div class="field field--wide">
             <label>Emplacement</label>
             <div class="segmented">
               <button
@@ -215,7 +223,12 @@ function submit(): void {
                 ~/.ssh/config
               </button>
             </div>
-            <span class="field__hint">
+            <span v-if="isMoving" class="field__hint field__hint--move">
+              Le serveur sera déplacé vers
+              {{ source === "config" ? "~/.ssh/config" : "la base chiffrée" }} : recréé à
+              destination, puis retiré de son emplacement actuel.
+            </span>
+            <span v-else class="field__hint">
               {{
                 source === "config"
                   ? "Portable et sauvegardable : l'entrée est lisible par ssh, scp et tout autre client."

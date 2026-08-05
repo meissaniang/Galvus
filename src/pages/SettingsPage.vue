@@ -4,6 +4,10 @@ import { storeToRefs } from "pinia";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { useSettingsStore, type Accent } from "@/stores/settings";
 import { shortcut } from "@/utils/platform";
+import { useMyServersStore } from "@/stores/myServers";
+import { useServersStore } from "@/stores/servers";
+import { useTunnelsStore } from "@/stores/tunnels";
+import { exportBackup, pickBackup, restoreSettings } from "@/services/backup";
 
 /**
  * Écran Paramètres — fidèle à « ScreenSettings.dc.html » : sous-navigation
@@ -65,6 +69,117 @@ watch(savedAt, () => {
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (toastVisible.value = false), 2500);
 });
+
+// --- Sauvegarde et restauration ---
+const myServers = useMyServersStore();
+const hostsStore = useServersStore();
+const tunnelsStore = useTunnelsStore();
+
+const backupBusy = ref(false);
+const backupNotice = ref<string | null>(null);
+const backupError = ref<string | null>(null);
+
+function notify(message: string): void {
+  backupNotice.value = message;
+  setTimeout(() => (backupNotice.value = null), 5000);
+}
+
+async function onExport(): Promise<void> {
+  backupBusy.value = true;
+  backupError.value = null;
+  try {
+    await Promise.all([myServers.load(), hostsStore.load(), tunnelsStore.load()]);
+    const path = await exportBackup({
+      servers: myServers.servers.map((s) => ({
+        name: s.name,
+        hostname: s.hostname,
+        port: s.port,
+        username: s.username,
+        identityFile: s.identityFile,
+        color: s.color,
+        favorite: s.favorite,
+        tags: s.tags,
+        group: s.group,
+      })),
+      configHosts: hostsStore.hosts.map((h) => ({
+        alias: h.alias,
+        hostname: h.hostname,
+        user: h.user,
+        port: h.port,
+        identityFile: h.identityFile,
+        proxyJump: h.proxyJump,
+        group: h.group,
+        color: h.color,
+        tags: h.tags,
+        favorite: h.favorite,
+      })),
+      tunnels: tunnelsStore.tunnels.map((t) => ({
+        name: t.name,
+        kind: t.kind,
+        sshTarget: t.sshTarget,
+        listenPort: t.listenPort,
+        targetHost: t.targetHost,
+        targetPort: t.targetPort,
+      })),
+      settings: {},
+    });
+    if (path) notify(`Configuration exportée dans ${path}`);
+  } catch (e) {
+    backupError.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    backupBusy.value = false;
+  }
+}
+
+async function onImport(): Promise<void> {
+  backupBusy.value = true;
+  backupError.value = null;
+  try {
+    const file = await pickBackup();
+    if (!file) return;
+
+    await Promise.all([myServers.load(), hostsStore.load(), tunnelsStore.load()]);
+    const knownServers = new Set(myServers.servers.map((s) => s.name));
+    const knownHosts = new Set(hostsStore.hosts.map((h) => h.alias));
+    const knownTunnels = new Set(tunnelsStore.tunnels.map((t) => t.name));
+    let added = 0;
+    let skipped = 0;
+
+    // L'import est additif : ce qui existe déjà n'est jamais écrasé.
+    for (const server of file.servers ?? []) {
+      if (knownServers.has(server.name)) skipped++;
+      else {
+        await myServers.create(server);
+        added++;
+      }
+    }
+    for (const host of file.configHosts ?? []) {
+      if (knownHosts.has(host.alias)) skipped++;
+      else {
+        await hostsStore.create(host);
+        added++;
+      }
+    }
+    for (const tunnel of file.tunnels ?? []) {
+      if (knownTunnels.has(tunnel.name)) skipped++;
+      else {
+        await tunnelsStore.create(tunnel);
+        added++;
+      }
+    }
+    const settingsRestored = restoreSettings(file.settings);
+
+    notify(
+      `${added} entrée${added > 1 ? "s" : ""} importée${added > 1 ? "s" : ""}` +
+        (skipped > 0 ? `, ${skipped} déjà présente${skipped > 1 ? "s" : ""}` : "") +
+        (settingsRestored ? " · préférences restaurées (relancez l'app)" : ""),
+    );
+  } catch (e) {
+    backupError.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    backupBusy.value = false;
+  }
+}
 
 const previewStyle = computed(() => ({
   fontFamily: settings.terminalFontFamily,
@@ -322,6 +437,29 @@ const previewStyle = computed(() => ({
               l'application.</span
             >
           </div>
+          <div class="advrow">
+            <div>
+              <div class="sec__title">Sauvegarde de la configuration</div>
+              <div class="sec__detail">
+                Serveurs, hôtes du fichier de configuration, tunnels et préférences dans
+                un seul fichier. Ne contient ni clé privée, ni passphrase.
+              </div>
+            </div>
+            <div class="advrow__actions">
+              <button class="resetbtn" :disabled="backupBusy" @click="onImport">
+                Importer
+              </button>
+              <button class="resetbtn" :disabled="backupBusy" @click="onExport">
+                Exporter
+              </button>
+            </div>
+          </div>
+
+          <p v-if="backupError" class="backup-msg backup-msg--error">{{ backupError }}</p>
+          <p v-else-if="backupNotice" class="backup-msg backup-msg--ok">
+            {{ backupNotice }}
+          </p>
+
           <div class="advrow">
             <div>
               <div class="sec__title">Réinitialiser les réglages du terminal</div>
@@ -855,8 +993,33 @@ const previewStyle = computed(() => ({
   white-space: nowrap;
 }
 
-.resetbtn:hover {
+.resetbtn:hover:not(:disabled) {
   background: var(--g-s3);
+}
+
+.resetbtn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.advrow__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.backup-msg {
+  margin: 0 0 4px;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.backup-msg--ok {
+  color: var(--g-success);
+}
+
+.backup-msg--error {
+  color: var(--g-danger);
 }
 
 /* Toast */

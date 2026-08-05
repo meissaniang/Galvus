@@ -12,6 +12,22 @@ pub fn list_hosts() -> Result<Vec<Host>, AppError> {
     crate::ssh::config::list_hosts()
 }
 
+/// Écrit un fichier de sauvegarde à l'emplacement choisi par l'utilisateur.
+///
+/// Le chemin provient du sélecteur de fichier natif : c'est l'utilisateur qui
+/// désigne la destination.
+#[tauri::command]
+pub fn backup_write(path: String, content: String) -> Result<(), AppError> {
+    std::fs::write(path, content)?;
+    Ok(())
+}
+
+/// Lit un fichier de sauvegarde.
+#[tauri::command]
+pub fn backup_read(path: String) -> Result<String, AppError> {
+    Ok(std::fs::read_to_string(path)?)
+}
+
 /// Ajoute une entrée au `~/.ssh/config`.
 #[tauri::command]
 pub fn config_host_create(input: ConfigHostInput) -> Result<(), AppError> {

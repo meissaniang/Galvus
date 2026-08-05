@@ -168,36 +168,53 @@ function openEdit(item: ServerItem): void {
 }
 
 async function onSave(result: ServerFormResult): Promise<void> {
+  // Changer d'emplacement revient à recréer l'entrée à destination puis à
+  // retirer l'ancienne. La création passe d'abord : en cas d'échec, rien n'est
+  // perdu.
+  const moving =
+    result.previousSource !== null && result.previousSource !== result.source;
+
+  const configInput = () => ({
+    alias: result.name,
+    hostname: result.hostname,
+    user: result.username,
+    port: result.port,
+    identityFile: result.identityFile,
+    proxyJump: null,
+    group: result.group,
+    color: result.color,
+    tags: result.tags,
+    favorite: result.favorite,
+  });
+  const localInput = () => ({
+    name: result.name,
+    hostname: result.hostname,
+    port: result.port,
+    username: result.username,
+    identityFile: result.identityFile,
+    color: result.color,
+    favorite: result.favorite,
+    tags: result.tags,
+    group: result.group,
+  });
+
   try {
     if (result.source === "config") {
-      const input = {
-        alias: result.name,
-        hostname: result.hostname,
-        user: result.username,
-        port: result.port,
-        identityFile: result.identityFile,
-        proxyJump: null,
-        group: result.group,
-        color: result.color,
-        tags: result.tags,
-        favorite: result.favorite,
-      };
-      if (result.originalAlias) await hostsStore.update(result.originalAlias, input);
-      else await hostsStore.create(input);
+      if (!moving && result.originalAlias) {
+        await hostsStore.update(result.originalAlias, configInput());
+      } else {
+        await hostsStore.create(configInput());
+        if (moving && result.id !== null) await myServers.remove(result.id);
+      }
     } else {
-      const input = {
-        name: result.name,
-        hostname: result.hostname,
-        port: result.port,
-        username: result.username,
-        identityFile: result.identityFile,
-        color: result.color,
-        favorite: result.favorite,
-        tags: result.tags,
-        group: result.group,
-      };
-      if (result.id !== null) await myServers.update(result.id, input);
-      else await myServers.create(input);
+      if (!moving && result.id !== null) {
+        await myServers.update(result.id, localInput());
+      } else {
+        await myServers.create(localInput());
+        if (moving && result.originalAlias) {
+          await hostsStore.remove(result.originalAlias);
+        }
+      }
     }
     dialogOpen.value = false;
   } catch {
@@ -215,6 +232,7 @@ async function onRemove(item: ServerItem): Promise<void> {
 async function toggleFavorite(item: ServerItem): Promise<void> {
   await onSave({
     source: item.source,
+    previousSource: item.source,
     id: item.id,
     originalAlias: item.source === "config" ? item.alias : null,
     name: item.name,
