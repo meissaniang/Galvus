@@ -17,6 +17,12 @@ updates:
     groups:
       rust:
         patterns: ["*"]
+    ignore:
+      # RUSTSEC-2024-0429 : unsoundness de glib::VariantStrIter, corrigée en
+      # 0.20. Inatteignable ici — glib arrive via gtk 0.18 (liaisons GTK3) dont
+      # dépend Tauri sur Linux, et qui plafonne glib à ^0.18. Sans cette
+      # exclusion, Dependabot échoue à chaque exécution. Voir SECURITY.md.
+      - dependency-name: glib
 
   - package-ecosystem: github-actions
     directory: /

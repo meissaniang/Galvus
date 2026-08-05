@@ -43,6 +43,20 @@ Ce que Galvus garantit :
 Ce qui reste hors de son contrôle : la sécurité du système hôte, celle des
 serveurs distants, et la robustesse des passphrases que vous choisissez.
 
+## Vulnérabilités connues sans correctif disponible
+
+**RUSTSEC-2024-0429** — unsoundness dans `glib::VariantStrIter` (sévérité
+modérée), corrigée en amont dans `glib` 0.20.
+
+Elle n'est pas corrigeable ici : `glib` arrive de manière transitive par
+`gtk` 0.18, les liaisons Rust de GTK3 dont Tauri dépend pour sa fenêtre et ses
+menus sous Linux. Ces liaisons plafonnent `glib` à `^0.18`, et il n'existe pas de
+version 0.20 pour GTK3. La correction viendra du passage de Tauri à GTK4.
+
+Portée réelle : **Linux uniquement** — macOS et Windows n'embarquent pas cette
+dépendance. Galvus n'utilise par ailleurs jamais `glib` directement, et donc
+jamais l'API concernée.
+
 ## Bonnes pratiques
 
 Gardez les permissions de vos clés privées restrictives — Galvus le signale et
