@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { useSettingsStore, type Accent } from "@/stores/settings";
 import { shortcut } from "@/utils/platform";
+import { getVersion } from "@tauri-apps/api/app";
 import { useMyServersStore } from "@/stores/myServers";
 import { useServersStore } from "@/stores/servers";
 import { useTunnelsStore } from "@/stores/tunnels";
@@ -68,6 +69,11 @@ watch(savedAt, () => {
   toastVisible.value = true;
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => (toastVisible.value = false), 2500);
+});
+
+const appVersion = ref("");
+onMounted(() => {
+  getVersion().then((v) => (appVersion.value = v));
 });
 
 // --- Sauvegarde et restauration ---
@@ -205,7 +211,7 @@ const previewStyle = computed(() => ({
       </button>
       <div class="subnav__spacer" />
       <div class="subnav__version">
-        <div class="subnav__vname">Galvus 0.1.0</div>
+        <div class="subnav__vname">Galvus {{ appVersion }}</div>
         <div class="subnav__vsub">100 % local</div>
       </div>
     </aside>
@@ -437,6 +443,26 @@ const previewStyle = computed(() => ({
               l'application.</span
             >
           </div>
+          <label class="switchrow">
+            <span>
+              Vérifier les mises à jour au démarrage
+              <span class="switchrow__hint">
+                Interroge l'API publique de GitHub une fois par jour. Seule requête réseau
+                de l'application ; aucune donnée n'est transmise.
+              </span>
+            </span>
+            <button
+              type="button"
+              class="toggle"
+              :class="{ 'toggle--on': settings.updateCheck }"
+              role="switch"
+              :aria-checked="settings.updateCheck"
+              @click="settings.updateCheck = !settings.updateCheck"
+            >
+              <span class="toggle__knob" />
+            </button>
+          </label>
+
           <div class="advrow">
             <div>
               <div class="sec__title">Sauvegarde de la configuration</div>
@@ -824,10 +850,20 @@ const previewStyle = computed(() => ({
   cursor: pointer;
 }
 
+.switchrow__hint {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--g-t3);
+  margin-top: 2px;
+  max-width: 460px;
+}
+
 .switchrow {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 9px 11px;
   background: var(--g-s0);
   border: 1px solid var(--g-border);

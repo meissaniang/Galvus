@@ -19,6 +19,7 @@ interface PersistedSettings {
   serversView: ServersView;
   serversSort: ServersSort;
   accent: Accent;
+  updateCheck: boolean;
 }
 
 const DEFAULTS: PersistedSettings = {
@@ -31,6 +32,7 @@ const DEFAULTS: PersistedSettings = {
   serversView: "grid",
   serversSort: "name",
   accent: "emerald",
+  updateCheck: true,
 };
 
 function read(): PersistedSettings {
@@ -54,6 +56,7 @@ export const useSettingsStore = defineStore("settings", () => {
   const serversView = ref<ServersView>(initial.serversView);
   const serversSort = ref<ServersSort>(initial.serversSort);
   const accent = ref<Accent>(initial.accent);
+  const updateCheck = ref(initial.updateCheck);
 
   /** Horodatage de la dernière sauvegarde (toast « Préférences enregistrées »). */
   const savedAt = ref<number | null>(null);
@@ -73,6 +76,7 @@ export const useSettingsStore = defineStore("settings", () => {
       serversView,
       serversSort,
       accent,
+      updateCheck,
     ],
     () => {
       localStorage.setItem(
@@ -86,6 +90,7 @@ export const useSettingsStore = defineStore("settings", () => {
           serversView: serversView.value,
           serversSort: serversSort.value,
           accent: accent.value,
+          updateCheck: updateCheck.value,
         } satisfies PersistedSettings),
       );
       applyAccent();
@@ -110,6 +115,7 @@ export const useSettingsStore = defineStore("settings", () => {
     serversView,
     serversSort,
     accent,
+    updateCheck,
     savedAt,
     reset,
   };

@@ -27,6 +27,11 @@ configuration peut être sauvegardée ou transportée.
   L'import est additif et n'écrase jamais une entrée existante.
 - **Installation par Homebrew** sur macOS, qui lève la mise en quarantaine et
   évite l'avertissement au premier lancement.
+- **Notification des nouvelles versions** : un bandeau discret signale une
+  version plus récente et renvoie à sa page de publication. C'est la seule
+  requête réseau de l'application — une interrogation quotidienne de l'API
+  publique de GitHub, sans aucune donnée transmise, désactivable dans
+  Paramètres › Avancé.
 
 ### Modifié
 

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { getVersion } from "@tauri-apps/api/app";
 import { isMac, shortcut } from "@/utils/platform";
+import UpdateBanner from "@/components/UpdateBanner.vue";
 import { storeToRefs } from "pinia";
 import { useThemeStore, type ThemeMode } from "@/stores/theme";
 import { useServersStore } from "@/stores/servers";
@@ -36,6 +38,9 @@ const keyCount = computed(() => keys.value.length);
 const runningTunnels = computed(() => tunnels.runningIds.length);
 
 const isActive = (name: string) => route.name === name;
+
+/** Version réelle du binaire, plutôt qu'une valeur à maintenir à la main. */
+const appVersion = ref("");
 
 function openSession(tabId: string): void {
   connections.setActiveTab(tabId);
@@ -90,6 +95,7 @@ onMounted(() => {
   if (servers.value.length === 0) myServers.load();
   if (keys.value.length === 0) keysStore.load();
   if (tunnels.tunnels.length === 0) tunnels.load();
+  getVersion().then((v) => (appVersion.value = v));
 });
 
 onBeforeUnmount(() => {
@@ -117,7 +123,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="sb__brand-text">
           <span class="sb__name">Galvus</span>
-          <span class="sb__version">v0.1.0 · 100 % local</span>
+          <span class="sb__version">v{{ appVersion }} · 100 % local</span>
         </div>
       </div>
 
@@ -308,6 +314,8 @@ onBeforeUnmount(() => {
     </aside>
 
     <main class="app-content">
+      <UpdateBanner />
+
       <!-- L'espace terminal est gardé en vie pour préserver les sessions PTY. -->
       <router-view v-slot="{ Component }">
         <keep-alive :include="['TerminalWorkspace']">
