@@ -25,6 +25,153 @@ fn config_path() -> Result<PathBuf, AppError> {
     Ok(home.join(".ssh").join("config"))
 }
 
+/// Profondeur maximale d'inclusion — même limite qu'OpenSSH, et protège des
+/// cycles (`Include` qui se rappelle lui-même).
+const MAX_INCLUDE_DEPTH: usize = 16;
+
+/// Répertoire `~/.ssh`, base des chemins relatifs d'un `Include`.
+fn ssh_dir() -> Result<PathBuf, AppError> {
+    let home = dirs::home_dir().ok_or(AppError::HomeDirNotFound)?;
+    Ok(home.join(".ssh"))
+}
+
+/// Développe `~` et rend les chemins relatifs à `~/.ssh`, comme OpenSSH.
+fn resolve_include_path(raw: &str, base: &Path) -> Option<PathBuf> {
+    let raw = raw.trim().trim_matches('"');
+    if raw.is_empty() {
+        return None;
+    }
+    if let Some(rest) = raw.strip_prefix("~/") {
+        return dirs::home_dir().map(|h| h.join(rest));
+    }
+    let path = Path::new(raw);
+    Some(if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        base.join(path)
+    })
+}
+
+/// Étend un motif `Include` en fichiers existants.
+///
+/// OpenSSH accepte les jokers (`Include config.d/*`). On ne gère que `*` et `?`
+/// sur le dernier segment, qui couvre tous les usages réels ; un chemin sans
+/// joker est renvoyé tel quel.
+fn expand_include(pattern: &Path) -> Vec<PathBuf> {
+    let name = match pattern.file_name().and_then(|n| n.to_str()) {
+        Some(n) => n,
+        None => return Vec::new(),
+    };
+    if !name.contains('*') && !name.contains('?') {
+        return if pattern.is_file() {
+            vec![pattern.to_path_buf()]
+        } else {
+            Vec::new()
+        };
+    }
+
+    let dir = pattern.parent().unwrap_or(Path::new("."));
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut files: Vec<PathBuf> = entries
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_file())
+        .filter(|e| {
+            e.file_name()
+                .to_str()
+                .is_some_and(|f| glob_matches(name, f))
+        })
+        .map(|e| e.path())
+        .collect();
+    // `read_dir` ne garantit aucun ordre ; OpenSSH lit les fichiers triés.
+    files.sort();
+    files
+}
+
+/// Correspondance de motif à la manière du shell, limitée à `*` et `?`.
+fn glob_matches(pattern: &str, name: &str) -> bool {
+    let (p, n): (Vec<char>, Vec<char>) = (pattern.chars().collect(), name.chars().collect());
+    // Programmation dynamique : `table[i][j]` = les i premiers caractères du
+    // motif consomment les j premiers du nom.
+    let mut table = vec![vec![false; n.len() + 1]; p.len() + 1];
+    table[0][0] = true;
+    for i in 1..=p.len() {
+        table[i][0] = table[i - 1][0] && p[i - 1] == '*';
+    }
+    for i in 1..=p.len() {
+        for j in 1..=n.len() {
+            table[i][j] = match p[i - 1] {
+                '*' => table[i - 1][j] || table[i][j - 1],
+                '?' => table[i - 1][j - 1],
+                c => table[i - 1][j - 1] && c == n[j - 1],
+            };
+        }
+    }
+    table[p.len()][n.len()]
+}
+
+/// Liste les fichiers de configuration, le principal puis ses inclusions.
+///
+/// Sans cela les hôtes déclarés dans un `Include` n'existeraient pas pour
+/// Galvus, alors qu'ils fonctionnent parfaitement avec `ssh`.
+fn config_files() -> Result<Vec<PathBuf>, AppError> {
+    let mut files = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    collect_files(&config_path()?, &mut files, &mut seen, 0);
+    Ok(files)
+}
+
+fn collect_files(
+    path: &Path,
+    out: &mut Vec<PathBuf>,
+    seen: &mut std::collections::HashSet<PathBuf>,
+    depth: usize,
+) {
+    if depth > MAX_INCLUDE_DEPTH || !path.is_file() {
+        return;
+    }
+    let canonical = path.canonicalize().unwrap_or_else(|_| path.to_path_buf());
+    if !seen.insert(canonical) {
+        return;
+    }
+    let Ok(content) = std::fs::read_to_string(path) else {
+        return;
+    };
+    out.push(path.to_path_buf());
+
+    let base = ssh_dir().unwrap_or_else(|_| PathBuf::from("."));
+    for line in content.lines() {
+        let trimmed = line.trim();
+        let Some((keyword, rest)) = trimmed.split_once(char::is_whitespace) else {
+            continue;
+        };
+        if !keyword.eq_ignore_ascii_case("include") {
+            continue;
+        }
+        for raw in rest.split_whitespace() {
+            let Some(pattern) = resolve_include_path(raw, &base) else {
+                continue;
+            };
+            for file in expand_include(&pattern) {
+                collect_files(&file, out, seen, depth + 1);
+            }
+        }
+    }
+}
+
+/// Chemin affichable : `~/.ssh/config` plutôt que `/Users/…/.ssh/config`.
+fn display_path(path: &Path) -> String {
+    let text = path.to_string_lossy().to_string();
+    match dirs::home_dir() {
+        Some(home) => match text.strip_prefix(&format!("{}/", home.to_string_lossy())) {
+            Some(rest) => format!("~/{rest}"),
+            None => text,
+        },
+        None => text,
+    }
+}
+
 /// Métadonnées de présentation attachées à un hôte.
 #[derive(Debug, Clone, Default)]
 struct Meta {
@@ -116,24 +263,31 @@ fn render_meta_fields(meta: &Meta) -> Option<String> {
 
 /// Liste les hôtes configurés, résolus par OpenSSH et enrichis des métadonnées.
 pub fn list_hosts() -> Result<Vec<Host>, AppError> {
-    let path = config_path()?;
-    if !path.exists() {
-        return Ok(Vec::new());
-    }
+    let mut hosts = Vec::new();
+    let mut seen = std::collections::HashSet::new();
 
-    let content = std::fs::read_to_string(&path)?;
-    Ok(parse_entries(&content)
-        .into_iter()
-        .map(|(alias, meta)| {
+    for file in config_files()? {
+        let Ok(content) = std::fs::read_to_string(&file) else {
+            continue;
+        };
+        let origin = display_path(&file);
+        for (alias, meta) in parse_entries(&content) {
+            // Un alias redéclaré ailleurs : OpenSSH retient la première
+            // occurrence, on fait de même.
+            if !seen.insert(alias.clone()) {
+                continue;
+            }
             let mut host = resolve_host(&alias);
             host.group = meta.group;
             host.color = meta.color;
             host.tags = meta.tags;
             host.favorite = meta.favorite;
             host.os = meta.os;
-            host
-        })
-        .collect())
+            host.source_file = Some(origin.clone());
+            hosts.push(host);
+        }
+    }
+    Ok(hosts)
 }
 
 /// Extrait les couples (alias, métadonnées) du fichier.
@@ -192,6 +346,7 @@ fn resolve_host(alias: &str) -> Host {
         tags: Vec::new(),
         favorite: false,
         os: None,
+        source_file: None,
     };
 
     let Ok(output) = Command::new("ssh").arg("-G").arg(alias).output() else {
@@ -343,6 +498,22 @@ pub fn delete_host(alias: &str) -> Result<(), AppError> {
 }
 
 /// Remplace le bloc d'un alias par `replacement`, ou le supprime si `None`.
+/// Fichier qui déclare cet alias, parmi le principal et ses inclusions.
+///
+/// Sans cela, éditer un hôte venu d'un `Include` échouerait — ou pire,
+/// écrirait un doublon dans le fichier principal qui masquerait l'original.
+fn file_containing(alias: &str) -> Result<PathBuf, AppError> {
+    for file in config_files()? {
+        let Ok(content) = std::fs::read_to_string(&file) else {
+            continue;
+        };
+        if content.lines().any(|l| is_host_line_for(l, alias)) {
+            return Ok(file);
+        }
+    }
+    Err(AppError::Command(format!("hôte « {alias} » introuvable")))
+}
+
 /// Renseigne le seul système d'exploitation d'un hôte du fichier.
 ///
 /// Ne touche qu'à la ligne `# galvus:` et laisse le bloc `Host` intact. Passer
@@ -351,7 +522,7 @@ pub fn delete_host(alias: &str) -> Result<(), AppError> {
 /// fichier un `Port 22` et une `IdentityFile` que l'utilisateur n'a jamais
 /// écrits.
 pub fn set_host_os(alias: &str, os: Option<&str>) -> Result<(), AppError> {
-    let path = config_path()?;
+    let path = file_containing(alias)?;
     let content = std::fs::read_to_string(&path)?;
 
     let mut out: Vec<String> = Vec::new();
@@ -385,7 +556,7 @@ pub fn set_host_os(alias: &str, os: Option<&str>) -> Result<(), AppError> {
 }
 
 fn rewrite(alias: &str, replacement: Option<&ConfigHostInput>) -> Result<(), AppError> {
-    let path = config_path()?;
+    let path = file_containing(alias)?;
     let content = std::fs::read_to_string(&path)?;
 
     let mut out: Vec<String> = Vec::new();
@@ -428,11 +599,22 @@ fn rewrite(alias: &str, replacement: Option<&ConfigHostInput>) -> Result<(), App
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_entries, parse_meta, render_meta};
+    use super::{glob_matches, parse_entries, parse_meta, render_meta};
     use crate::models::ConfigHostInput;
 
     fn aliases(content: &str) -> Vec<String> {
         parse_entries(content).into_iter().map(|(a, _)| a).collect()
+    }
+
+    #[test]
+    fn le_motif_d_inclusion_gere_etoile_et_point_d_interrogation() {
+        assert!(glob_matches("*", "work"));
+        assert!(glob_matches("*.conf", "prod.conf"));
+        assert!(!glob_matches("*.conf", "prod.conf.bak"));
+        assert!(glob_matches("config?", "config1"));
+        assert!(!glob_matches("config?", "config"));
+        assert!(glob_matches("a*b*c", "azzbzzc"));
+        assert!(!glob_matches("a*b*c", "azzbzz"));
     }
 
     #[test]

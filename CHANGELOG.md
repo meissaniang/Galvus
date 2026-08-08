@@ -24,6 +24,14 @@ projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 - **Séparateurs de split redimensionnables** à la souris.
 - **URL cliquables** dans la sortie, ouvertes dans le navigateur du système.
 - **⌘1…9** pour aller directement à un onglet.
+- **Les `Include` du `~/.ssh/config` sont suivis.** Les hôtes déclarés dans un
+  fichier inclus — `Include config.d/*` — n'apparaissaient pas dans Galvus alors
+  qu'ils fonctionnaient avec `ssh`. Ils sont désormais listés, rangés par
+  fichier de déclaration puis par groupe : un hôte du fichier de configuration
+  affiche `~/.ssh/config.d/work › Prod` au lieu d'un « Sans groupe » qui les
+  mélangeait tous. Les modifications visent le fichier qui déclare l'hôte, et
+  non plus le fichier principal — ce qui y aurait écrit un doublon masquant
+  l'original.
 - **Logo du système à la place des initiales.** Le système est reconnu dans la
   bannière affichée par OpenSSH à la connexion — « Welcome to Ubuntu 22.04.5
   LTS » — et la pastille du serveur porte alors le logo de la distribution, sur

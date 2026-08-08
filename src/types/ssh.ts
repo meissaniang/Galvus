@@ -18,6 +18,8 @@ export interface Host {
   favorite: boolean;
   /** Système détecté ou choisi (voir `OsId`). */
   os: string | null;
+  /** Fichier de déclaration, affichable : `~/.ssh/config`, `~/.ssh/config.d/work`. */
+  sourceFile: string | null;
 }
 
 /** Un serveur enregistré par l'utilisateur (persisté dans la base chiffrée). */
@@ -88,6 +90,7 @@ export interface ServerItem {
   tags: string[];
   group: string | null;
   os: string | null;
+  sourceFile: string | null;
 }
 
 /** Type de tunnel SSH. */

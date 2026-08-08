@@ -33,6 +33,11 @@ pub struct Host {
     pub tags: Vec<String>,
     pub favorite: bool,
     pub os: Option<String>,
+
+    /// Fichier où l'hôte est déclaré, affichable (`~/.ssh/config`,
+    /// `~/.ssh/config.d/work`). Renseigné à la lecture, jamais transmis en
+    /// écriture : c'est la déclaration qui fait foi, pas ce que l'IHM croit.
+    pub source_file: Option<String>,
 }
 
 /// Champs éditables d'une entrée `Host` du fichier `~/.ssh/config`.

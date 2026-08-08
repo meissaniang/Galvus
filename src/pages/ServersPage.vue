@@ -52,6 +52,7 @@ function fromServer(s: Server): ServerItem {
     tags: s.tags,
     group: s.group,
     os: s.os,
+    sourceFile: null,
   };
 }
 
@@ -71,6 +72,7 @@ function fromHost(h: Host): ServerItem {
     tags: h.tags,
     group: h.group,
     os: h.os,
+    sourceFile: h.sourceFile,
   };
 }
 
@@ -105,18 +107,50 @@ const sortedItems = computed<ServerItem[]>(() => {
   return sorted;
 });
 
-/** Groupes ordonnés : nommés d'abord (alpha), non groupés en dernier. */
-const grouped = computed<[string, ServerItem[]][]>(() => {
-  const groups = new Map<string, ServerItem[]>();
+/**
+ * Section d'affichage d'un serveur.
+ *
+ * Les entrées du `~/.ssh/config` sont d'abord rangées par fichier de
+ * déclaration : avec des `Include`, savoir d'où vient un hôte vaut mieux qu'un
+ * « Sans groupe » qui les mélangerait tous. Le groupe s'y ajoute quand il y en
+ * a un. Les serveurs de la base chiffrée gardent le comportement d'origine.
+ */
+interface Section {
+  key: string;
+  label: string;
+  /** Groupe réel, sans le fichier : c'est lui qu'un nouveau serveur héritera. */
+  group: string | null;
+  source: ServerSource;
+  items: ServerItem[];
+}
+
+function sectionKey(item: ServerItem): string {
+  if (item.source !== "config") return item.group ?? "";
+  const file = item.sourceFile ?? "~/.ssh/config";
+  return item.group ? `${file} › ${item.group}` : file;
+}
+
+const sections = computed<Section[]>(() => {
+  const map = new Map<string, Section>();
   for (const item of sortedItems.value) {
-    const key = item.group ?? "";
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(item);
+    const key = sectionKey(item);
+    let section = map.get(key);
+    if (!section) {
+      section = {
+        key,
+        label: key || "Sans groupe",
+        group: item.group,
+        source: item.source,
+        items: [],
+      };
+      map.set(key, section);
+    }
+    section.items.push(item);
   }
-  return [...groups.entries()].sort(([a], [b]) => {
-    if (a === "") return 1;
-    if (b === "") return -1;
-    return a.localeCompare(b);
+  return [...map.values()].sort((a, b) => {
+    if (a.key === "") return 1;
+    if (b.key === "") return -1;
+    return a.key.localeCompare(b.key);
   });
 });
 
@@ -157,10 +191,12 @@ const editingItem = ref<ServerItem | null>(null);
 const dialogGroup = ref<string | null>(null);
 const dialogSource = ref<ServerSource>("local");
 
-function openNew(group: string | null = null): void {
+function openNew(group: string | null = null, source: ServerSource = "local"): void {
   editingItem.value = null;
   dialogGroup.value = group;
-  dialogSource.value = "local";
+  // Ajouter depuis une section du fichier de config y crée l'entrée : c'est
+  // ce que le contexte laisse attendre.
+  dialogSource.value = source;
   dialogOpen.value = true;
 }
 
@@ -362,12 +398,12 @@ function addressOf(item: ServerItem): string {
       <p v-if="serversError" class="state state--error">{{ serversError }}</p>
       <p v-if="hostsError" class="state state--error">{{ hostsError }}</p>
 
-      <section v-for="[group, list] in grouped" :key="group || '__none'" class="group">
+      <section v-for="section in sections" :key="section.key || '__none'" class="group">
         <header class="group__head">
           <button
             class="group__chevron"
-            :class="{ 'group__chevron--closed': collapsed.has(group) }"
-            @click="toggleGroup(group)"
+            :class="{ 'group__chevron--closed': collapsed.has(section.key) }"
+            @click="toggleGroup(section.key)"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path
@@ -378,16 +414,16 @@ function addressOf(item: ServerItem): string {
               />
             </svg>
           </button>
-          <span class="group__name">{{ group || "Sans groupe" }}</span>
-          <span class="group__count">{{ list.length }}</span>
+          <span class="group__name">{{ section.label }}</span>
+          <span class="group__count">{{ section.items.length }}</span>
           <span class="group__line" />
         </header>
 
-        <template v-if="!collapsed.has(group)">
+        <template v-if="!collapsed.has(section.key)">
           <!-- Vue grille -->
           <div v-if="serversView === 'grid'" class="grid">
             <ServerCard
-              v-for="item in list"
+              v-for="item in section.items"
               :key="item.key"
               :item="item"
               :connected="connectedLabels.has(item.name)"
@@ -396,7 +432,7 @@ function addressOf(item: ServerItem): string {
               @remove="onRemove"
               @toggle-favorite="toggleFavorite"
             />
-            <button class="addcard" @click="openNew(group || null)">
+            <button class="addcard" @click="openNew(section.group, section.source)">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
                 <path
                   d="M7 2.4v9.2M2.4 7h9.2"
@@ -405,14 +441,14 @@ function addressOf(item: ServerItem): string {
                   stroke-linecap="round"
                 />
               </svg>
-              {{ group ? `Ajouter à ${group}` : "Ajouter un serveur" }}
+              {{ section.group ? `Ajouter à ${section.group}` : "Ajouter un serveur" }}
             </button>
           </div>
 
           <!-- Vue liste -->
           <div v-else class="rows">
             <div
-              v-for="item in list"
+              v-for="item in section.items"
               :key="item.key"
               class="row"
               @dblclick="connect(item)"
