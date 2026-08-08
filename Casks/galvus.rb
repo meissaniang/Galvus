@@ -2,9 +2,9 @@
 cask "galvus" do
   arch arm: "aarch64", intel: "x64"
 
-  version "0.1.0"
-  sha256 arm:   "6e36fad390ab3b3e3ca4876e3afbe7d8579ccf5a7cadf7d094b95bc4a0be5462",
-         intel: "a4916568beaacbc657425585d018c0e772ca8eeb390f837f0b59ef90e3f61559"
+  version "0.2.0"
+  sha256 arm:   "d334d3fccf90e3688b977a11629cbcb3acb1b91847b3bfaf98666a3e8414914a",
+         intel: "0eb96f584cc0ac57d522ae66af25655022509677946c4ae0b9e796b0efed424a"
 
   url "https://github.com/meissaniang/Galvus/releases/download/v#{version}/Galvus_#{version}_#{arch}-macos.dmg",
       verified: "github.com/meissaniang/Galvus/"
