@@ -5,6 +5,25 @@ projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ## [Non publié]
 
+### Modifié
+
+- **Terminal refondu dans l'esprit de Termius.** Les seize couleurs ANSI sont
+  désormais définies : xterm retombait jusqu'ici sur ses valeurs héritées du
+  VGA, qui rendaient la sortie de `ls`, `git` ou `htop` criarde. L'en-tête qui
+  coiffait chaque pane a disparu — la sortie occupe toute la surface — et le
+  pane actif se signale par un liseré interne qui ne décale pas la grille de
+  caractères. Onglets plats, barre d'état allégée.
+- Le rendu passe sur le GPU (WebGL), avec repli automatique sur le rendu DOM
+  quand l'accélération n'est pas disponible.
+
+### Ajouté
+
+- **Recherche dans le terminal** (⌘F) avec compteur d'occurrences, navigation
+  par ⏎ / ⇧⏎ et surlignage des correspondances.
+- **Séparateurs de split redimensionnables** à la souris.
+- **URL cliquables** dans la sortie, ouvertes dans le navigateur du système.
+- **⌘1…9** pour aller directement à un onglet.
+
 ## [0.2.0] — 2026-08-02
 
 Les hôtes du `~/.ssh/config` deviennent des serveurs à part entière, et la
