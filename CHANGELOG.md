@@ -24,6 +24,15 @@ projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 - **Séparateurs de split redimensionnables** à la souris.
 - **URL cliquables** dans la sortie, ouvertes dans le navigateur du système.
 - **⌘1…9** pour aller directement à un onglet.
+- **Logo du système à la place des initiales.** Le système est reconnu dans la
+  bannière affichée par OpenSSH à la connexion — « Welcome to Ubuntu 22.04.5
+  LTS » — et la pastille du serveur porte alors le logo de la distribution, sur
+  les cartes, dans la liste et dans les onglets du terminal. Dix-neuf systèmes
+  reconnus. Rien n'est exécuté sur la machine distante pour cela ; un serveur
+  sans bannière garde ses initiales, et le système reste renseignable à la main
+  dans la fiche. Il est conservé avec le reste : en base pour les serveurs
+  locaux, dans le commentaire `# galvus:` pour les hôtes du fichier de
+  configuration.
 
 ## [0.2.0] — 2026-08-02
 

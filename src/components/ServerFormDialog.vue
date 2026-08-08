@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import type { ServerItem, ServerSource } from "@/types/ssh";
+import { OSES } from "@/utils/osIcons";
 import { pickFile } from "@/services/filePicker";
 
 /**
@@ -33,6 +34,7 @@ export interface ServerFormResult {
   favorite: boolean;
   tags: string[];
   group: string | null;
+  os: string | null;
 }
 
 const emit = defineEmits<{ save: [result: ServerFormResult]; close: [] }>();
@@ -58,6 +60,7 @@ const form = reactive({
   color: null as string | null,
   favorite: false,
   group: "" as string | null,
+  os: null as string | null,
 });
 const tags = ref<string[]>([]);
 const tagDraft = ref("");
@@ -93,6 +96,7 @@ watch(
       color: item?.color ?? null,
       favorite: item?.favorite ?? false,
       group: item?.group ?? props.defaultGroup ?? "",
+      os: item?.os ?? null,
     });
     tags.value = item ? [...item.tags] : [];
   },
@@ -147,6 +151,7 @@ function submit(): void {
     favorite: form.favorite,
     tags: [...tags.value],
     group: form.group?.trim() || null,
+    os: form.os || null,
   });
 }
 </script>
@@ -333,6 +338,20 @@ function submit(): void {
                 @blur="addTag"
               />
             </div>
+          </div>
+
+          <div class="field--os">
+            <label for="f-os">Système</label>
+            <select id="f-os" v-model="form.os" class="input">
+              <option :value="null">Détecter automatiquement</option>
+              <option v-for="os in OSES" :key="os.id" :value="os.id">
+                {{ os.label }}
+              </option>
+            </select>
+            <p class="field__hint">
+              Reconnu depuis la bannière de connexion. À renseigner à la main si le
+              serveur n'en affiche pas.
+            </p>
           </div>
 
           <div class="field--footer">
@@ -708,6 +727,25 @@ function submit(): void {
   justify-content: space-between;
   gap: 16px;
   padding-top: 2px;
+}
+
+.field--os {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.field--os label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--g-t2);
+}
+
+.field__hint {
+  margin: 0;
+  font-size: 11px;
+  color: var(--g-t3);
 }
 
 .swatches {

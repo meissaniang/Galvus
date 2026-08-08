@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { ServerItem } from "@/types/ssh";
+import OsBadge from "./OsBadge.vue";
 
 /**
  * Tuile serveur — fidèle à « ScreenServers.dc.html ». Elle rend indifféremment
@@ -27,22 +28,8 @@ const LIGHT_TILES: Record<string, string> = {
   "#8bcb4a": "#12200a",
 };
 
-const accent = computed(() => {
-  if (props.item.color) return props.item.color;
-  let hue = 0;
-  for (const ch of props.item.name) {
-    hue = (hue * 31 + ch.charCodeAt(0)) % 360;
-  }
-  return `hsl(${hue} 65% 48%)`;
-});
-
-const tileFg = computed(() => LIGHT_TILES[accent.value.toLowerCase()] ?? "#ffffff");
-
-const initials = computed(() =>
-  props.item.name
-    .replace(/[^a-zA-Z0-9]/g, "")
-    .slice(0, 2)
-    .toUpperCase(),
+const tileFg = computed(
+  () => LIGHT_TILES[(props.item.color ?? "").toLowerCase()] ?? "#ffffff",
 );
 
 const address = computed(() => {
@@ -55,9 +42,14 @@ const address = computed(() => {
 
 <template>
   <article class="tile" @dblclick="emit('connect', item)">
-    <div class="tile__ava" :style="{ background: accent, color: tileFg }">
-      {{ initials }}
-    </div>
+    <OsBadge
+      class="tile__ava"
+      :os="item.os"
+      :name="item.name"
+      :color="item.color"
+      :fg="tileFg"
+      :size="34"
+    />
 
     <div class="tile__body">
       <div class="tile__head">

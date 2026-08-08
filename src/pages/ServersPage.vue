@@ -7,6 +7,7 @@ import { useMyServersStore } from "@/stores/myServers";
 import { useConnectionsStore } from "@/stores/connections";
 import { useSettingsStore } from "@/stores/settings";
 import ServerCard from "@/components/ServerCard.vue";
+import OsBadge from "@/components/OsBadge.vue";
 import ServerFormDialog, {
   type ServerFormResult,
 } from "@/components/ServerFormDialog.vue";
@@ -50,6 +51,7 @@ function fromServer(s: Server): ServerItem {
     favorite: s.favorite,
     tags: s.tags,
     group: s.group,
+    os: s.os,
   };
 }
 
@@ -68,6 +70,7 @@ function fromHost(h: Host): ServerItem {
     favorite: h.favorite,
     tags: h.tags,
     group: h.group,
+    os: h.os,
   };
 }
 
@@ -144,7 +147,7 @@ function connect(item: ServerItem): void {
           ...(item.identityFile ? ["-i", item.identityFile] : []),
           item.username ? `${item.username}@${item.hostname}` : item.hostname,
         ];
-  connections.open(item.name, args);
+  connections.open(item.name, args, item.key);
   router.push({ name: "terminal" });
 }
 
@@ -185,6 +188,7 @@ async function onSave(result: ServerFormResult): Promise<void> {
     color: result.color,
     tags: result.tags,
     favorite: result.favorite,
+    os: result.os,
   });
   const localInput = () => ({
     name: result.name,
@@ -196,6 +200,7 @@ async function onSave(result: ServerFormResult): Promise<void> {
     favorite: result.favorite,
     tags: result.tags,
     group: result.group,
+    os: result.os,
   });
 
   try {
@@ -244,6 +249,7 @@ async function toggleFavorite(item: ServerItem): Promise<void> {
     favorite: !item.favorite,
     tags: item.tags,
     group: item.group,
+    os: item.os,
   });
 }
 
@@ -411,9 +417,13 @@ function addressOf(item: ServerItem): string {
               class="row"
               @dblclick="connect(item)"
             >
-              <span class="row__ava" :style="{ background: item.color ?? 'var(--g-s3)' }">
-                {{ item.name.slice(0, 2).toUpperCase() }}
-              </span>
+              <OsBadge
+                class="row__ava"
+                :os="item.os"
+                :name="item.name"
+                :color="item.color"
+                :size="24"
+              />
               <span class="row__name">
                 {{ item.name }}
                 <span v-if="connectedLabels.has(item.name)" class="row__dot" />
@@ -779,16 +789,7 @@ function addressOf(item: ServerItem): string {
 }
 
 .row__ava {
-  width: 26px;
-  height: 26px;
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
 }
 
 .row__name {

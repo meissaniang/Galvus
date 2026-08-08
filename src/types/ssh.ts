@@ -16,6 +16,8 @@ export interface Host {
   color: string | null;
   tags: string[];
   favorite: boolean;
+  /** Système détecté ou choisi (voir `OsId`). */
+  os: string | null;
 }
 
 /** Un serveur enregistré par l'utilisateur (persisté dans la base chiffrée). */
@@ -30,6 +32,7 @@ export interface Server {
   favorite: boolean;
   tags: string[];
   group: string | null;
+  os: string | null;
 }
 
 /** Données de création/édition d'un serveur (sans identifiant). */
@@ -43,6 +46,7 @@ export interface ServerInput {
   favorite: boolean;
   tags: string[];
   group: string | null;
+  os: string | null;
 }
 
 /** Champs éditables d'une entrée Host du ~/.ssh/config. */
@@ -57,6 +61,7 @@ export interface ConfigHostInput {
   color: string | null;
   tags: string[];
   favorite: boolean;
+  os: string | null;
 }
 
 /** Origine d'un serveur affiché : base chiffrée ou fichier de configuration. */
@@ -82,6 +87,7 @@ export interface ServerItem {
   favorite: boolean;
   tags: string[];
   group: string | null;
+  os: string | null;
 }
 
 /** Type de tunnel SSH. */

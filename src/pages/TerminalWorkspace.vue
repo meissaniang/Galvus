@@ -4,6 +4,9 @@ import { useRoute, useRouter } from "vue-router";
 import { storeToRefs } from "pinia";
 import { useConnectionsStore, type TerminalTab } from "@/stores/connections";
 import TerminalView from "@/components/TerminalView.vue";
+import OsBadge from "@/components/OsBadge.vue";
+import { useMyServersStore } from "@/stores/myServers";
+import { useServersStore } from "@/stores/servers";
 import { shortcut } from "@/utils/platform";
 
 /**
@@ -19,6 +22,36 @@ const connections = useConnectionsStore();
 const { tabs, activeTabId, activeTab } = storeToRefs(connections);
 const route = useRoute();
 const router = useRouter();
+const myServers = useMyServersStore();
+const hostsStore = useServersStore();
+
+/**
+ * Système reconnu dans la bannière : on l'enregistre sur la fiche d'origine,
+ * pour que la pastille porte le logo dès la prochaine ouverture de la liste.
+ *
+ * La clé encode l'origine (`local:12`, `config:web`), les deux n'étant pas
+ * stockées au même endroit.
+ */
+function onOsDetected(serverKey: string | null, os: string): void {
+  if (!serverKey) return;
+  const [source, id] = [
+    serverKey.slice(0, serverKey.indexOf(":")),
+    serverKey.slice(serverKey.indexOf(":") + 1),
+  ];
+  if (source === "local") void myServers.setOs(Number(id), os);
+  else if (source === "config") void hostsStore.setOs(id, os);
+}
+
+/** Système du serveur d'un onglet, pour la pastille de la barre d'onglets. */
+function tabOs(tab: TerminalTab): string | null {
+  const key = tab.panes[0]?.serverKey;
+  if (!key) return null;
+  const id = key.slice(key.indexOf(":") + 1);
+  if (key.startsWith("local:")) {
+    return myServers.servers.find((s) => s.id === Number(id))?.os ?? null;
+  }
+  return hostsStore.hosts.find((h) => h.alias === id)?.os ?? null;
+}
 
 /** Couleur de pastille dérivée du libellé (même règle que les tuiles). */
 function tileColor(label: string): string {
@@ -150,7 +183,15 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
           :title="connections.tabTitle(tab)"
           @click="connections.setActiveTab(tab.id)"
         >
+          <OsBadge
+            v-if="tabOs(tab)"
+            class="wtab__logo"
+            :os="tabOs(tab)"
+            :name="tab.panes[0]?.label ?? ''"
+            :size="15"
+          />
           <span
+            v-else
             class="wtab__dot"
             :style="{ background: tileColor(tab.panes[0]?.label ?? '') }"
           />
@@ -267,7 +308,11 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
                 />
               </svg>
             </button>
-            <TerminalView :args="pane.args" class="pane__view" />
+            <TerminalView
+              :args="pane.args"
+              class="pane__view"
+              @os-detected="onOsDetected(pane.serverKey, $event)"
+            />
           </div>
 
           <div
@@ -393,6 +438,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 
 .wtab--on .wtab__dot {
   opacity: 1;
+}
+
+/* La pastille de la barre d'onglets se passe du fond : le logo suffit. */
+.wtab__logo {
+  border: 0 !important;
+  background: transparent !important;
 }
 
 .wtab__label {

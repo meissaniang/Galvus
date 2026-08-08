@@ -19,6 +19,8 @@ pub struct Server {
     pub favorite: bool,
     pub tags: Vec<String>,
     pub group: Option<String>,
+    /// Système détecté à la connexion, ou choisi à la main. Voir `OsId` côté TS.
+    pub os: Option<String>,
 }
 
 /// Données de création/édition d'un serveur (sans identifiant).
@@ -35,4 +37,5 @@ pub struct ServerInput {
     #[serde(default)]
     pub tags: Vec<String>,
     pub group: Option<String>,
+    pub os: Option<String>,
 }

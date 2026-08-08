@@ -20,6 +20,11 @@ export const hostsRepository = {
     return invoke<void>("config_host_update", { alias, input });
   },
 
+  /** Renseigne le seul système, sans toucher au bloc `Host`. */
+  setOs(alias: string, os: string | null): Promise<void> {
+    return invoke<void>("config_host_set_os", { alias, os });
+  },
+
   /** Supprime une entrée du fichier de config. */
   remove(alias: string): Promise<void> {
     return invoke<void>("config_host_delete", { alias });

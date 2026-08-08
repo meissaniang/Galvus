@@ -10,9 +10,11 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { terminalRepository } from "@/repositories/terminalRepository";
 import { useSettingsStore } from "@/stores/settings";
 import { MATERIAL_DARK } from "@/utils/terminalTheme";
+import { BannerCollector } from "@/utils/osDetect";
 import "@xterm/xterm/css/xterm.css";
 
 const props = defineProps<{ args: string[] }>();
+const emit = defineEmits<{ osDetected: [os: string] }>();
 const settings = useSettingsStore();
 
 const container = ref<HTMLDivElement | null>(null);
@@ -24,6 +26,12 @@ let search: SearchAddon | null = null;
 let unlistenOutput: UnlistenFn | null = null;
 let unlistenExit: UnlistenFn | null = null;
 let resizeObserver: ResizeObserver | null = null;
+
+/**
+ * OpenSSH affiche `/etc/motd` juste après l'authentification : le système s'y
+ * lit sans avoir à exécuter quoi que ce soit sur la machine distante.
+ */
+let banner: BannerCollector | null = new BannerCollector();
 
 // --- Recherche (⌘F), à la manière de Termius ---
 const searchOpen = ref(false);
@@ -147,8 +155,14 @@ onMounted(async () => {
 
   // Écoute AVANT l'ouverture de session pour ne rien manquer (bannière SSH…).
   unlistenOutput = await terminalRepository.onOutput((payload) => {
-    if (payload.sessionId === sessionId && term) {
-      term.write(new Uint8Array(payload.data));
+    if (payload.sessionId !== sessionId || !term) return;
+    const bytes = new Uint8Array(payload.data);
+    term.write(bytes);
+
+    const detected = banner?.push(bytes);
+    if (detected) {
+      banner = null;
+      emit("osDetected", detected);
     }
   });
   unlistenExit = await terminalRepository.onExit((payload) => {
@@ -193,6 +207,8 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(async () => {
+  banner?.stop();
+  banner = null;
   resizeObserver?.disconnect();
   unlistenOutput?.();
   unlistenExit?.();

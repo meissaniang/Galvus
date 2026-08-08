@@ -18,6 +18,11 @@ export const serversRepository = {
     return invoke<Server>("server_update", { id, input });
   },
 
+  /** Renseigne le seul système, sans réécrire le reste de la fiche. */
+  setOs(id: number, os: string | null): Promise<void> {
+    return invoke<void>("server_set_os", { id, os });
+  },
+
   remove(id: number): Promise<void> {
     return invoke<void>("server_delete", { id });
   },

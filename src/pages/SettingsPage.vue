@@ -106,6 +106,7 @@ async function onExport(): Promise<void> {
         favorite: s.favorite,
         tags: s.tags,
         group: s.group,
+        os: s.os,
       })),
       configHosts: hostsStore.hosts.map((h) => ({
         alias: h.alias,
@@ -118,6 +119,7 @@ async function onExport(): Promise<void> {
         color: h.color,
         tags: h.tags,
         favorite: h.favorite,
+        os: h.os,
       })),
       tunnels: tunnelsStore.tunnels.map((t) => ({
         name: t.name,

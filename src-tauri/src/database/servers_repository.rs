@@ -20,11 +20,12 @@ fn map_row(row: &Row) -> rusqlite::Result<Server> {
         favorite: row.get::<_, i64>(7)? != 0,
         tags,
         group: row.get(9)?,
+        os: row.get(10)?,
     })
 }
 
 const SELECT_COLUMNS: &str =
-    "id, name, hostname, port, username, identity_file, color, favorite, tags, group_name";
+    "id, name, hostname, port, username, identity_file, color, favorite, tags, group_name, os";
 
 /// Liste les serveurs (favoris d'abord, puis par nom).
 pub fn list(conn: &Connection) -> Result<Vec<Server>, AppError> {
@@ -51,8 +52,8 @@ pub fn create(conn: &Connection, input: &ServerInput) -> Result<Server, AppError
     let tags_json = serde_json::to_string(&input.tags).unwrap_or_else(|_| "[]".to_string());
     conn.execute(
         "INSERT INTO servers
-            (name, hostname, port, username, identity_file, color, favorite, tags, group_name)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+            (name, hostname, port, username, identity_file, color, favorite, tags, group_name, os)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         params![
             input.name,
             input.hostname,
@@ -63,6 +64,7 @@ pub fn create(conn: &Connection, input: &ServerInput) -> Result<Server, AppError
             input.favorite as i64,
             tags_json,
             input.group,
+            input.os,
         ],
     )?;
     get(conn, conn.last_insert_rowid())
@@ -74,8 +76,8 @@ pub fn update(conn: &Connection, id: i64, input: &ServerInput) -> Result<Server,
     conn.execute(
         "UPDATE servers
          SET name = ?1, hostname = ?2, port = ?3, username = ?4, identity_file = ?5,
-             color = ?6, favorite = ?7, tags = ?8, group_name = ?9
-         WHERE id = ?10",
+             color = ?6, favorite = ?7, tags = ?8, group_name = ?9, os = ?10
+         WHERE id = ?11",
         params![
             input.name,
             input.hostname,
@@ -86,10 +88,20 @@ pub fn update(conn: &Connection, id: i64, input: &ServerInput) -> Result<Server,
             input.favorite as i64,
             tags_json,
             input.group,
+            input.os,
             id,
         ],
     )?;
     get(conn, id)
+}
+
+/// Renseigne le seul système d'exploitation.
+///
+/// Séparé d'`update` : la détection survient pendant une session et ne doit
+/// pas écraser une modification que l'utilisateur ferait au même moment.
+pub fn set_os(conn: &Connection, id: i64, os: Option<&str>) -> Result<(), AppError> {
+    conn.execute("UPDATE servers SET os = ?1 WHERE id = ?2", params![os, id])?;
+    Ok(())
 }
 
 /// Supprime un serveur.

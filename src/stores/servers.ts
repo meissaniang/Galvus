@@ -58,6 +58,22 @@ export const useServersStore = defineStore("servers", () => {
     }
   }
 
+  /**
+   * Enregistre le système détecté dans le commentaire `# galvus:`.
+   * Silencieux en cas d'échec : le fichier de config peut être en lecture
+   * seule, ce n'est pas une raison pour gêner la session en cours.
+   */
+  async function setOs(alias: string, os: string | null): Promise<void> {
+    const host = hosts.value.find((h) => h.alias === alias);
+    if (!host || host.os === os) return;
+    try {
+      await hostsRepository.setOs(alias, os);
+      host.os = os;
+    } catch {
+      // Sans conséquence : la détection sera retentée à la prochaine session.
+    }
+  }
+
   /** Supprime une entrée du ~/.ssh/config puis recharge la liste. */
   async function remove(alias: string): Promise<void> {
     error.value = null;
@@ -70,5 +86,16 @@ export const useServersStore = defineStore("servers", () => {
     }
   }
 
-  return { hosts, loading, error, query, filteredHosts, load, create, update, remove };
+  return {
+    hosts,
+    loading,
+    error,
+    query,
+    filteredHosts,
+    load,
+    create,
+    update,
+    setOs,
+    remove,
+  };
 });

@@ -45,10 +45,36 @@ export const useMyServersStore = defineStore("myServers", () => {
     await load();
   }
 
+  /**
+   * Enregistre le système détecté. Silencieux en cas d'échec : c'est un
+   * enrichissement d'affichage, il ne doit jamais interrompre une session.
+   */
+  async function setOs(id: number, os: string | null): Promise<void> {
+    const server = servers.value.find((s) => s.id === id);
+    if (!server || server.os === os) return;
+    try {
+      await serversRepository.setOs(id, os);
+      server.os = os;
+    } catch {
+      // Sans conséquence : la détection sera retentée à la prochaine session.
+    }
+  }
+
   async function remove(id: number): Promise<void> {
     await serversRepository.remove(id);
     await load();
   }
 
-  return { servers, loading, error, query, filtered, load, create, update, remove };
+  return {
+    servers,
+    loading,
+    error,
+    query,
+    filtered,
+    load,
+    create,
+    update,
+    setOs,
+    remove,
+  };
 });

@@ -54,6 +54,7 @@ impl Database {
         // Colonnes ajoutées après coup (bases existantes de l'étape 5).
         ensure_column(conn, "servers", "tags", "TEXT NOT NULL DEFAULT '[]'")?;
         ensure_column(conn, "servers", "group_name", "TEXT")?;
+        ensure_column(conn, "servers", "os", "TEXT")?;
 
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS tunnels (

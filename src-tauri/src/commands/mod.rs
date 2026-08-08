@@ -40,6 +40,12 @@ pub fn config_host_update(alias: String, input: ConfigHostInput) -> Result<(), A
     crate::ssh::config::update_host(&alias, &input)
 }
 
+/// Renseigne le système d'exploitation d'un hôte du fichier de configuration.
+#[tauri::command]
+pub fn config_host_set_os(alias: String, os: Option<String>) -> Result<(), AppError> {
+    crate::ssh::config::set_host_os(&alias, os.as_deref())
+}
+
 /// Supprime une entrée du `~/.ssh/config`.
 #[tauri::command]
 pub fn config_host_delete(alias: String) -> Result<(), AppError> {
@@ -165,6 +171,17 @@ pub fn server_update(
 ) -> Result<Server, AppError> {
     let conn = db.conn.lock().expect("db mutex poisoned");
     servers_repository::update(&conn, id, &input)
+}
+
+/// Renseigne le système d'exploitation d'un serveur, sans toucher au reste.
+#[tauri::command]
+pub fn server_set_os(
+    db: tauri::State<'_, Database>,
+    id: i64,
+    os: Option<String>,
+) -> Result<(), AppError> {
+    let conn = db.conn.lock().expect("db mutex poisoned");
+    servers_repository::set_os(&conn, id, os.as_deref())
 }
 
 /// Supprime un serveur.

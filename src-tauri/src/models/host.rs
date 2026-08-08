@@ -32,6 +32,7 @@ pub struct Host {
     pub color: Option<String>,
     pub tags: Vec<String>,
     pub favorite: bool,
+    pub os: Option<String>,
 }
 
 /// Champs éditables d'une entrée `Host` du fichier `~/.ssh/config`.
@@ -52,4 +53,6 @@ pub struct ConfigHostInput {
     pub tags: Vec<String>,
     #[serde(default)]
     pub favorite: bool,
+    #[serde(default)]
+    pub os: Option<String>,
 }

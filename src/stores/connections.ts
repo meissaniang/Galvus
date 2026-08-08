@@ -6,6 +6,11 @@ export interface Pane {
   id: string;
   label: string;
   args: string[];
+  /**
+   * Clé du `ServerItem` d'origine (`local:12`, `config:web`), pour attribuer
+   * le système détecté. Absente quand la session ne vient pas d'une fiche.
+   */
+  serverKey: string | null;
 }
 
 /** Sens de découpe des panes au sein d'un onglet. */
@@ -43,12 +48,12 @@ export const useConnectionsStore = defineStore("connections", () => {
   }
 
   /** Ouvre un nouvel onglet (1 pane) et le rend actif. */
-  function open(label: string, args: string[]): string {
+  function open(label: string, args: string[], serverKey: string | null = null): string {
     const paneId = uuid();
     const tab: TerminalTab = {
       id: uuid(),
       direction: "row",
-      panes: [{ id: paneId, label, args }],
+      panes: [{ id: paneId, label, args, serverKey }],
       activePaneId: paneId,
     };
     tabs.value.push(tab);
@@ -62,7 +67,12 @@ export const useConnectionsStore = defineStore("connections", () => {
     if (!tab) return;
     const source = tab.panes.find((p) => p.id === tab.activePaneId) ?? tab.panes[0];
     if (!source) return;
-    const pane: Pane = { id: uuid(), label: source.label, args: [...source.args] };
+    const pane: Pane = {
+      id: uuid(),
+      label: source.label,
+      args: [...source.args],
+      serverKey: source.serverKey,
+    };
     tab.direction = direction;
     tab.panes.push(pane);
     tab.activePaneId = pane.id;

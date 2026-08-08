@@ -32,9 +32,10 @@ struct Meta {
     color: Option<String>,
     tags: Vec<String>,
     favorite: bool,
+    os: Option<String>,
 }
 
-/// Analyse `# galvus: group=Prod; color=#4C8DFF; tags=web,eu; favorite=true`.
+/// Analyse `# galvus: group=Prod; color=#4C8DFF; tags=web,eu; favorite=true; os=ubuntu`.
 fn parse_meta(line: &str) -> Meta {
     let mut meta = Meta::default();
     let Some(rest) = line.trim().strip_prefix(META_PREFIX) else {
@@ -52,6 +53,7 @@ fn parse_meta(line: &str) -> Meta {
         match key.trim() {
             "group" => meta.group = Some(value.to_string()),
             "color" => meta.color = Some(value.to_string()),
+            "os" => meta.os = Some(value.to_string()),
             "favorite" => meta.favorite = value == "true",
             "tags" => {
                 meta.tags = value
@@ -71,16 +73,29 @@ fn parse_meta(line: &str) -> Meta {
 ///
 /// Les `;` et `=` sont retirés des valeurs : ce sont les séparateurs du format.
 fn render_meta(input: &ConfigHostInput) -> Option<String> {
+    render_meta_fields(&Meta {
+        group: input.group.clone(),
+        color: input.color.clone(),
+        tags: input.tags.clone(),
+        favorite: input.favorite,
+        os: input.os.clone(),
+    })
+}
+
+/// Rend la ligne de métadonnées depuis un `Meta`, ou `None` s'il n'y a rien à
+/// conserver. Les `;` et `=` sont retirés des valeurs : ce sont les
+/// séparateurs du format.
+fn render_meta_fields(meta: &Meta) -> Option<String> {
     let clean = |s: &str| s.replace([';', '='], "").trim().to_string();
     let mut fields: Vec<String> = Vec::new();
 
-    if let Some(group) = input.group.as_deref().map(clean).filter(|s| !s.is_empty()) {
+    if let Some(group) = meta.group.as_deref().map(clean).filter(|s| !s.is_empty()) {
         fields.push(format!("group={group}"));
     }
-    if let Some(color) = input.color.as_deref().map(clean).filter(|s| !s.is_empty()) {
+    if let Some(color) = meta.color.as_deref().map(clean).filter(|s| !s.is_empty()) {
         fields.push(format!("color={color}"));
     }
-    let tags: Vec<String> = input
+    let tags: Vec<String> = meta
         .tags
         .iter()
         .map(|t| clean(t).replace(',', ""))
@@ -89,7 +104,10 @@ fn render_meta(input: &ConfigHostInput) -> Option<String> {
     if !tags.is_empty() {
         fields.push(format!("tags={}", tags.join(",")));
     }
-    if input.favorite {
+    if let Some(os) = meta.os.as_deref().map(clean).filter(|s| !s.is_empty()) {
+        fields.push(format!("os={os}"));
+    }
+    if meta.favorite {
         fields.push("favorite=true".to_string());
     }
 
@@ -112,6 +130,7 @@ pub fn list_hosts() -> Result<Vec<Host>, AppError> {
             host.color = meta.color;
             host.tags = meta.tags;
             host.favorite = meta.favorite;
+            host.os = meta.os;
             host
         })
         .collect())
@@ -172,6 +191,7 @@ fn resolve_host(alias: &str) -> Host {
         color: None,
         tags: Vec::new(),
         favorite: false,
+        os: None,
     };
 
     let Ok(output) = Command::new("ssh").arg("-G").arg(alias).output() else {
@@ -323,6 +343,47 @@ pub fn delete_host(alias: &str) -> Result<(), AppError> {
 }
 
 /// Remplace le bloc d'un alias par `replacement`, ou le supprime si `None`.
+/// Renseigne le seul système d'exploitation d'un hôte du fichier.
+///
+/// Ne touche qu'à la ligne `# galvus:` et laisse le bloc `Host` intact. Passer
+/// par `update_host` serait destructeur : les champs de `Host` sont résolus par
+/// `ssh -G`, qui matérialise les valeurs par défaut — on réécrirait dans le
+/// fichier un `Port 22` et une `IdentityFile` que l'utilisateur n'a jamais
+/// écrits.
+pub fn set_host_os(alias: &str, os: Option<&str>) -> Result<(), AppError> {
+    let path = config_path()?;
+    let content = std::fs::read_to_string(&path)?;
+
+    let mut out: Vec<String> = Vec::new();
+    let mut found = false;
+
+    for line in content.lines() {
+        if !found && is_host_line_for(line, alias) {
+            // Métadonnées existantes du bloc, à compléter plutôt qu'à remplacer.
+            let mut meta = Meta::default();
+            if out
+                .last()
+                .is_some_and(|l| l.trim().starts_with(META_PREFIX))
+            {
+                meta = parse_meta(&out.pop().unwrap_or_default());
+            }
+            meta.os = os.map(str::to_string);
+
+            if let Some(rendered) = render_meta_fields(&meta) {
+                out.push(rendered);
+            }
+            found = true;
+        }
+        out.push(line.to_string());
+    }
+
+    if !found {
+        return Err(AppError::Command(format!("hôte « {alias} » introuvable")));
+    }
+
+    write_config(&path, &out)
+}
+
 fn rewrite(alias: &str, replacement: Option<&ConfigHostInput>) -> Result<(), AppError> {
     let path = config_path()?;
     let content = std::fs::read_to_string(&path)?;
@@ -423,12 +484,14 @@ mod tests {
             color: Some("#23C48A".into()),
             tags: vec!["nginx".into(), "eu".into()],
             favorite: true,
+            os: Some("ubuntu".into()),
         };
         let meta = parse_meta(&render_meta(&input).unwrap());
 
         assert_eq!(meta.group.as_deref(), Some("Prod"));
         assert_eq!(meta.color.as_deref(), Some("#23C48A"));
         assert_eq!(meta.tags, vec!["nginx", "eu"]);
+        assert_eq!(meta.os.as_deref(), Some("ubuntu"));
         assert!(meta.favorite);
     }
 
@@ -445,6 +508,7 @@ mod tests {
             color: None,
             tags: vec![],
             favorite: false,
+            os: None,
         };
         assert!(render_meta(&input).is_none());
     }
