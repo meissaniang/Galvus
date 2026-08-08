@@ -72,6 +72,22 @@ function paneCountText(tab: TerminalTab | null): string {
   return `${tab.panes.length} panes · ${tab.direction === "row" ? "vertical" : "horizontal"}`;
 }
 
+/**
+ * Retour aux serveurs quand la dernière session se ferme.
+ *
+ * Sur la transition seulement, jamais à l'arrivée : venir ici depuis la barre
+ * latérale sans session ouverte doit montrer l'état vide, pas renvoyer aussitôt
+ * d'où l'on vient.
+ */
+watch(
+  () => tabs.value.length,
+  (count, previous) => {
+    if (count === 0 && previous > 0 && route.name === "terminal") {
+      router.push({ name: "servers" });
+    }
+  },
+);
+
 // ---------- Répartition des panes ----------
 // Conservée hors du store : c'est une préférence d'affichage, pas un état de
 // session. Les tailles sont exprimées en pourcentage et suivent l'onglet.
