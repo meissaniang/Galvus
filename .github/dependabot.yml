@@ -20,8 +20,13 @@ updates:
     ignore:
       # RUSTSEC-2024-0429 : unsoundness de glib::VariantStrIter, corrigée en
       # 0.20. Inatteignable ici — glib arrive via gtk 0.18 (liaisons GTK3) dont
-      # dépend Tauri sur Linux, et qui plafonne glib à ^0.18. Sans cette
-      # exclusion, Dependabot échoue à chaque exécution. Voir SECURITY.md.
+      # dépend Tauri sur Linux, et qui plafonne glib à ^0.18. Voir SECURITY.md.
+      #
+      # Cette exclusion ne concerne que les montées de version hebdomadaires.
+      # Les mises à jour de sécurité forment des jobs distincts, qui échouent
+      # tant que l'alerte reste ouverte : « security_update_not_possible » sans
+      # exclusion, « all_versions_ignored » avec. Seule la fermeture de l'alerte
+      # (Security › Dependabot alerts) les arrête.
       - dependency-name: glib
 
   - package-ecosystem: github-actions
