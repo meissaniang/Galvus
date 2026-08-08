@@ -10,6 +10,8 @@ export interface TerminalOutput {
 /** Fin d'une session. */
 export interface TerminalExit {
   sessionId: string;
+  /** Code de sortie du processus ; `null` s'il n'a pas pu être recueilli. */
+  code: number | null;
 }
 
 /**

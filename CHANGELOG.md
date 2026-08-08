@@ -24,6 +24,10 @@ projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ### Ajouté
 
+- **Fermeture automatique en fin de session** : taper `exit` referme le pane, et
+  l'onglet avec lui si c'était le dernier. Une session interrompue reste
+  ouverte, elle, avec son code de sortie — fermer escamoterait le message qui
+  explique l'échec.
 - **Recherche dans le terminal** (⌘F) avec compteur d'occurrences, navigation
   par ⏎ / ⇧⏎ et surlignage des correspondances.
 - **Séparateurs de split redimensionnables** à la souris.

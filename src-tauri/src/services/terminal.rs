@@ -14,7 +14,7 @@ use std::sync::Mutex;
 
 use portable_pty::{Child, CommandBuilder, MasterPty, PtySize};
 use serde::Serialize;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::errors::AppError;
 
@@ -32,6 +32,12 @@ struct OutputPayload {
 struct ExitPayload {
     #[serde(rename = "sessionId")]
     session_id: String,
+    /// Code de sortie du processus, absent s'il n'a pas pu être recueilli.
+    ///
+    /// Il départage une déconnexion normale d'un échec : le frontend ferme le
+    /// pane sur un `0`, et le conserve sinon pour laisser lire l'erreur —
+    /// `ssh` rend 255 quand c'est lui qui échoue.
+    code: Option<u32>,
 }
 
 /// Ressources d'une session vivante.
@@ -107,10 +113,14 @@ impl TerminalManager {
                     }
                 }
             }
+            let code = reader_app
+                .try_state::<TerminalManager>()
+                .and_then(|manager| manager.reap(&reader_id));
             let _ = reader_app.emit(
                 "terminal://exit",
                 ExitPayload {
                     session_id: reader_id,
+                    code,
                 },
             );
         });
@@ -159,6 +169,19 @@ impl TerminalManager {
                 .map_err(|e| AppError::Command(e.to_string()))?;
         }
         Ok(())
+    }
+
+    /// Retire une session déjà terminée et recueille son code de sortie.
+    ///
+    /// Appelée depuis le thread de lecture dès que le PTY rend EOF : le
+    /// processus est mort, `wait` retourne aussitôt. Retirer l'entrée ici évite
+    /// aussi qu'un `close` ultérieur ne tue un identifiant réattribué.
+    fn reap(&self, session_id: &str) -> Option<u32> {
+        let mut sessions = self.sessions.lock().ok()?;
+        let mut session = sessions.remove(session_id)?;
+        let code = session.child.wait().ok().map(|status| status.exit_code());
+        log::info!("session terminal terminée: {session_id} (code {code:?})");
+        code
     }
 
     /// Termine la session et tue le processus enfant.

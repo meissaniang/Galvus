@@ -14,7 +14,7 @@ import { BannerCollector } from "@/utils/osDetect";
 import "@xterm/xterm/css/xterm.css";
 
 const props = defineProps<{ args: string[] }>();
-const emit = defineEmits<{ osDetected: [os: string] }>();
+const emit = defineEmits<{ osDetected: [os: string]; finished: [] }>();
 const settings = useSettingsStore();
 
 const container = ref<HTMLDivElement | null>(null);
@@ -166,9 +166,19 @@ onMounted(async () => {
     }
   });
   unlistenExit = await terminalRepository.onExit((payload) => {
-    if (payload.sessionId === sessionId && term) {
-      term.write("\r\n\x1b[38;2;84;84;84m── session terminée ──\x1b[0m\r\n");
+    if (payload.sessionId !== sessionId || !term) return;
+    banner?.stop();
+
+    // Déconnexion normale : le pane n'a plus rien à montrer, il se ferme.
+    if (payload.code === 0) {
+      emit("finished");
+      return;
     }
+
+    // Échec en revanche : la sortie porte la raison — hôte injoignable, clé
+    // refusée… Fermer ici escamoterait le seul message utile.
+    const reason = payload.code === null ? "" : ` (code ${payload.code})`;
+    term.write(`\r\n\x1b[38;2;255;83;112m── session interrompue${reason} ──\x1b[0m\r\n`);
   });
 
   term.onData((data) => {

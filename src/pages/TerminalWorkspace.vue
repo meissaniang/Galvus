@@ -312,6 +312,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
               :args="pane.args"
               class="pane__view"
               @os-detected="onOsDetected(pane.serverKey, $event)"
+              @finished="connections.closePane(tab.id, pane.id)"
             />
           </div>
 
