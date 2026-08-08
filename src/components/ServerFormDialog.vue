@@ -285,7 +285,7 @@ function submit(): void {
             </datalist>
           </div>
 
-          <div class="field field--wide">
+          <div class="field">
             <label for="f-os">Système</label>
             <div class="select">
               <select id="f-os" v-model="form.os">
@@ -310,10 +310,7 @@ function submit(): void {
                 />
               </svg>
             </div>
-            <p class="field__hint">
-              Reconnu depuis la bannière de connexion. À renseigner à la main si le
-              serveur n'en affiche pas.
-            </p>
+            <p class="field__hint">Reconnu à la connexion, sauf indication ici.</p>
           </div>
 
           <div class="field--footer">
