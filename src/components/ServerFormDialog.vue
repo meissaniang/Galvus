@@ -285,14 +285,31 @@ function submit(): void {
             </datalist>
           </div>
 
-          <div class="field--os">
+          <div class="field field--wide">
             <label for="f-os">Système</label>
-            <select id="f-os" v-model="form.os" class="input">
-              <option :value="null">Détecter automatiquement</option>
-              <option v-for="os in OSES" :key="os.id" :value="os.id">
-                {{ os.label }}
-              </option>
-            </select>
+            <div class="select">
+              <select id="f-os" v-model="form.os">
+                <option :value="null">Détecter automatiquement</option>
+                <option v-for="os in OSES" :key="os.id" :value="os.id">
+                  {{ os.label }}
+                </option>
+              </select>
+              <svg
+                class="select__chevron"
+                width="11"
+                height="11"
+                viewBox="0 0 12 12"
+                fill="none"
+              >
+                <path
+                  d="M3 4.6l3 3 3-3"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
             <p class="field__hint">
               Reconnu depuis la bannière de connexion. À renseigner à la main si le
               serveur n'en affiche pas.
@@ -510,6 +527,7 @@ function submit(): void {
   box-shadow: var(--g-sh1);
 }
 
+.field select,
 .field input {
   height: 34px;
   border-radius: 9px;
@@ -527,12 +545,39 @@ function submit(): void {
   width: 100%;
 }
 
+/* Un select natif ignore la hauteur et impose sa flèche : on le neutralise
+   pour qu'il s'aligne sur les autres champs, et la flèche est redessinée. */
+.field select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 30px;
+}
+
+.select {
+  position: relative;
+  display: flex;
+  color: var(--g-t3);
+}
+
+.select__chevron {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .field input.mono {
   font-family: var(--g-font-mono);
   font-size: 12.5px;
 }
 
 .field input:focus,
+.field select:focus {
+  border-color: var(--g-accent);
+  box-shadow: 0 0 0 3px var(--g-accent-ring);
+}
+
 .field input::placeholder {
   color: var(--g-t3);
 }
@@ -578,19 +623,6 @@ function submit(): void {
   display: flex;
   align-items: center;
   padding-top: 2px;
-}
-
-.field--os {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 14px;
-}
-
-.field--os label {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--g-t2);
 }
 
 .field__hint {
