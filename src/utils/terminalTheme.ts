@@ -1,38 +1,41 @@
 import type { ITheme } from "@xterm/xterm";
 
 /**
- * Palette du terminal.
+ * Palette du terminal — Material Dark.
  *
  * Les seize couleurs ANSI doivent être définies explicitement : sans elles,
  * xterm retombe sur ses valeurs héritées du VGA (rouge `#cd0000`, bleu
- * `#0000ee`…), qui jurent avec le reste de l'interface et rendent la sortie de
- * `ls`, `git` ou `htop` agressive. Celles-ci sont désaturées et alignées sur
- * l'accent de l'application.
+ * `#0000ee`…), qui rendent la sortie de `ls`, `git` ou `htop` agressive.
+ *
+ * Le schéma est repris tel quel, sans réharmonisation avec l'accent de
+ * l'application : c'est une palette connue, et l'intérêt d'en choisir une
+ * connue est justement qu'elle soit reconnaissable. Conformément à l'original,
+ * les teintes vives sont identiques aux normales — seuls le noir et le blanc
+ * ont une variante claire.
  */
-export const TERMINAL_THEME: ITheme = {
-  background: "#0B1017",
-  foreground: "#D6E1EC",
-  cursor: "#23C48A",
-  cursorAccent: "#0B1017",
-  selectionBackground: "rgba(35, 196, 138, 0.26)",
-  selectionForeground: "#EEF4FA",
-  selectionInactiveBackground: "rgba(154, 167, 184, 0.16)",
+export const MATERIAL_DARK: ITheme = {
+  background: "#212121",
+  foreground: "#EEFFFF",
+  cursor: "#FFCC00",
+  cursorAccent: "#212121",
+  selectionBackground: "rgba(97, 97, 97, 0.5)",
+  selectionInactiveBackground: "rgba(97, 97, 97, 0.28)",
 
-  black: "#1B2430",
-  red: "#FF6B7F",
-  green: "#23C48A",
-  yellow: "#FFC46B",
-  blue: "#5AA9FF",
-  magenta: "#C98BFF",
-  cyan: "#1FC7E8",
-  white: "#C8D4E2",
+  black: "#000000",
+  red: "#FF5370",
+  green: "#C3E88D",
+  yellow: "#FFCB6B",
+  blue: "#82AAFF",
+  magenta: "#C792EA",
+  cyan: "#89DDFF",
+  white: "#EEFFFF",
 
-  brightBlack: "#4A5A6E",
-  brightRed: "#FF8A9B",
-  brightGreen: "#4EE0A8",
-  brightYellow: "#FFD591",
-  brightBlue: "#85C2FF",
-  brightMagenta: "#DCAAFF",
-  brightCyan: "#6FE0F5",
-  brightWhite: "#EEF4FA",
+  brightBlack: "#545454",
+  brightRed: "#FF5370",
+  brightGreen: "#C3E88D",
+  brightYellow: "#FFCB6B",
+  brightBlue: "#82AAFF",
+  brightMagenta: "#C792EA",
+  brightCyan: "#89DDFF",
+  brightWhite: "#FFFFFF",
 };

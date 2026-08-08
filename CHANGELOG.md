@@ -7,9 +7,10 @@ projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
 
 ### Modifié
 
-- **Terminal refondu dans l'esprit de Termius.** Les seize couleurs ANSI sont
-  désormais définies : xterm retombait jusqu'ici sur ses valeurs héritées du
-  VGA, qui rendaient la sortie de `ls`, `git` ou `htop` criarde. L'en-tête qui
+- **Terminal refondu dans l'esprit de Termius, sur la palette Material Dark.**
+  Les seize couleurs ANSI sont désormais définies : xterm retombait jusqu'ici
+  sur ses valeurs héritées du VGA, qui rendaient la sortie de `ls`, `git` ou
+  `htop` criarde. L'en-tête qui
   coiffait chaque pane a disparu — la sortie occupe toute la surface — et le
   pane actif se signale par un liseré interne qui ne décale pas la grille de
   caractères. Onglets plats, barre d'état allégée.

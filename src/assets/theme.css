@@ -31,11 +31,11 @@
   --g-danger-soft: rgba(211, 58, 66, 0.1);
   --g-info: #2563eb;
   /* Le terminal reste sombre en thème clair, comme chez tous les clients SSH.
-     La valeur doit rester identique à `TERMINAL_THEME.background` : la marge
-     du conteneur et le canvas xterm se toucheraient sinon sur deux noirs
+     La valeur doit rester identique à `MATERIAL_DARK.background` : la marge du
+     conteneur et le canvas xterm se toucheraient sinon sur deux gris
      différents, et la jointure se verrait. */
-  --g-term-bg: #0b1017;
-  --g-term-fg: #d6e1ec;
+  --g-term-bg: #212121;
+  --g-term-fg: #eeffff;
   --g-sh1: 0 1px 2px rgba(16, 24, 40, 0.06);
   --g-sh2: 0 6px 18px rgba(16, 24, 40, 0.09);
   --g-sh3: 0 24px 60px rgba(16, 24, 40, 0.18);
@@ -73,8 +73,8 @@
   --g-danger: #f0565f;
   --g-danger-soft: rgba(240, 86, 95, 0.14);
   --g-info: #4c8dff;
-  --g-term-bg: #0b1017;
-  --g-term-fg: #d6e1ec;
+  --g-term-bg: #212121;
+  --g-term-fg: #eeffff;
   --g-sh1: 0 1px 2px rgba(0, 0, 0, 0.45);
   --g-sh2: 0 6px 18px rgba(0, 0, 0, 0.45);
   --g-sh3: 0 24px 60px rgba(0, 0, 0, 0.6);

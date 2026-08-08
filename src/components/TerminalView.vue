@@ -9,7 +9,7 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { terminalRepository } from "@/repositories/terminalRepository";
 import { useSettingsStore } from "@/stores/settings";
-import { TERMINAL_THEME } from "@/utils/terminalTheme";
+import { MATERIAL_DARK } from "@/utils/terminalTheme";
 import "@xterm/xterm/css/xterm.css";
 
 const props = defineProps<{ args: string[] }>();
@@ -33,10 +33,10 @@ const matches = ref({ current: 0, total: 0 });
 
 const SEARCH_OPTIONS = {
   decorations: {
-    matchBackground: "#3A4557",
-    matchOverviewRuler: "#5AA9FF",
-    activeMatchBackground: "#23C48A",
-    activeMatchColorOverviewRuler: "#23C48A",
+    matchBackground: "#455A64",
+    matchOverviewRuler: "#82AAFF",
+    activeMatchBackground: "#0277BD",
+    activeMatchColorOverviewRuler: "#FFCB6B",
   },
 } as const;
 
@@ -109,7 +109,7 @@ onMounted(async () => {
     // perdrait sa cohérence si chaque mot en gras changeait de teinte.
     drawBoldTextInBrightColors: false,
     allowProposedApi: true,
-    theme: TERMINAL_THEME,
+    theme: MATERIAL_DARK,
   });
 
   fit = new FitAddon();
@@ -153,7 +153,7 @@ onMounted(async () => {
   });
   unlistenExit = await terminalRepository.onExit((payload) => {
     if (payload.sessionId === sessionId && term) {
-      term.write("\r\n\x1b[38;2;74;90;110m── session terminée ──\x1b[0m\r\n");
+      term.write("\r\n\x1b[38;2;84;84;84m── session terminée ──\x1b[0m\r\n");
     }
   });
 
@@ -293,7 +293,7 @@ defineExpose({ openSearch, focus: () => term?.focus() });
 .terminal-view :deep(.xterm-viewport) {
   background: transparent !important;
   scrollbar-width: thin;
-  scrollbar-color: #33404f transparent;
+  scrollbar-color: #424242 transparent;
 }
 
 .terminal-view :deep(.xterm-viewport)::-webkit-scrollbar {
@@ -305,13 +305,13 @@ defineExpose({ openSearch, focus: () => term?.focus() });
 }
 
 .terminal-view :deep(.xterm-viewport)::-webkit-scrollbar-thumb {
-  background: #2c3846;
+  background: #424242;
   border: 2px solid var(--g-term-bg);
   border-radius: 999px;
 }
 
 .terminal-view :deep(.xterm-viewport)::-webkit-scrollbar-thumb:hover {
-  background: #3d4c5e;
+  background: #545454;
 }
 
 /* Les liens ne doivent se signaler qu'au survol, pour ne pas barioler la sortie. */
@@ -330,14 +330,14 @@ defineExpose({ openSearch, focus: () => term?.focus() });
   gap: 6px;
   padding: 5px 6px 5px 9px;
   border-radius: 9px;
-  background: rgba(20, 28, 39, 0.96);
-  border: 1px solid #2b3745;
+  background: rgba(42, 42, 42, 0.96);
+  border: 1px solid #3a3a3a;
   box-shadow: 0 8px 24px rgb(0 0 0 / 38%);
   backdrop-filter: blur(8px);
 }
 
 .search__icon {
-  color: #6b7a8d;
+  color: #9e9e9e;
   flex-shrink: 0;
 }
 
@@ -345,20 +345,20 @@ defineExpose({ openSearch, focus: () => term?.focus() });
   width: 190px;
   border: 0;
   background: transparent;
-  color: #d6e1ec;
+  color: #eeffff;
   font-family: var(--g-font-mono);
   font-size: 11.5px;
   outline: none;
 }
 
 .search__input::placeholder {
-  color: #5c6b7d;
+  color: #757575;
 }
 
 .search__count {
   font-family: var(--g-font-mono);
   font-size: 10.5px;
-  color: #6b7a8d;
+  color: #757575;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -372,14 +372,14 @@ defineExpose({ openSearch, focus: () => term?.focus() });
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: #8b9aad;
+  color: #b0b0b0;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .search__nav:hover {
-  color: #eef4fa;
-  background: #2b3745;
+  color: #ffffff;
+  background: #3a3a3a;
 }
 
 .search-enter-active,

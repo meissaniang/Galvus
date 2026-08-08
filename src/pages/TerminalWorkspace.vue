@@ -540,7 +540,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: #5c6b7d;
+  /* Posé sur le fond du terminal, pas sur une surface du thème. */
+  color: #757575;
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.12s ease;
