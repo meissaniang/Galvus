@@ -39,17 +39,6 @@ export interface ServerFormResult {
 
 const emit = defineEmits<{ save: [result: ServerFormResult]; close: [] }>();
 
-/** Couleurs de pastille du design system. */
-const SWATCHES = [
-  "#4C8DFF",
-  "#A96CF5",
-  "#23C48A",
-  "#F08A3C",
-  "#EC5F9E",
-  "#22B8D9",
-  "#7B8CA6",
-];
-
 const source = ref<ServerSource>("local");
 const form = reactive({
   name: "",
@@ -62,8 +51,12 @@ const form = reactive({
   group: "" as string | null,
   os: null as string | null,
 });
+/**
+ * Tags et couleur ne sont plus saisissables — ils encombraient la création
+ * pour un usage rare. Les valeurs existantes sont conservées et réémises
+ * telles quelles : retirer un champ de l'IHM ne doit pas effacer la donnée.
+ */
 const tags = ref<string[]>([]);
-const tagDraft = ref("");
 const submitted = ref(false);
 
 const isEdit = computed(() => props.item !== null);
@@ -83,7 +76,6 @@ watch(
   (open) => {
     if (!open) return;
     submitted.value = false;
-    tagDraft.value = "";
     const item = props.item;
 
     source.value = item?.source ?? props.defaultSource ?? "local";
@@ -102,25 +94,6 @@ watch(
   },
 );
 
-function addTag(): void {
-  const value = tagDraft.value.trim().replace(/,$/, "");
-  if (value && !tags.value.includes(value)) tags.value.push(value);
-  tagDraft.value = "";
-}
-
-function removeTag(tag: string): void {
-  tags.value = tags.value.filter((t) => t !== tag);
-}
-
-function onTagKeydown(event: KeyboardEvent): void {
-  if (event.key === "Enter" || event.key === ",") {
-    event.preventDefault();
-    addTag();
-  } else if (event.key === "Backspace" && tagDraft.value === "" && tags.value.length) {
-    tags.value.pop();
-  }
-}
-
 async function browseKey(): Promise<void> {
   const path = await pickFile("Choisir un fichier de clé privée");
   if (path) form.identityFile = path;
@@ -135,7 +108,6 @@ const isValid = () =>
 
 function submit(): void {
   submitted.value = true;
-  addTag();
   if (!isValid()) return;
   emit("save", {
     source: source.value,
@@ -313,33 +285,6 @@ function submit(): void {
             </datalist>
           </div>
 
-          <div class="field">
-            <label>Tags</label>
-            <div class="tags">
-              <span v-for="tag in tags" :key="tag" class="tags__chip">
-                {{ tag }}
-                <button type="button" class="tags__x" @click="removeTag(tag)">
-                  <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                    <path
-                      d="M2.5 2.5l5 5M7.5 2.5l-5 5"
-                      stroke="currentColor"
-                      stroke-width="1.4"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                </button>
-              </span>
-              <input
-                v-model="tagDraft"
-                type="text"
-                class="tags__input"
-                :placeholder="tags.length === 0 ? 'postgres, replica…' : '+'"
-                @keydown="onTagKeydown"
-                @blur="addTag"
-              />
-            </div>
-          </div>
-
           <div class="field--os">
             <label for="f-os">Système</label>
             <select id="f-os" v-model="form.os" class="input">
@@ -355,29 +300,6 @@ function submit(): void {
           </div>
 
           <div class="field--footer">
-            <div class="swatches">
-              <label>Couleur de la pastille</label>
-              <div class="swatches__row">
-                <button
-                  type="button"
-                  class="swatch swatch--auto"
-                  :class="{ 'swatch--on': form.color === null }"
-                  title="Automatique"
-                  @click="form.color = null"
-                >
-                  A
-                </button>
-                <button
-                  v-for="c in SWATCHES"
-                  :key="c"
-                  type="button"
-                  class="swatch"
-                  :class="{ 'swatch--on': form.color === c }"
-                  :style="{ background: c, '--sw': c }"
-                  @click="form.color = c"
-                />
-              </div>
-            </div>
             <label class="fav">
               <span class="fav__label">Favori</span>
               <button
@@ -551,12 +473,6 @@ function submit(): void {
 }
 
 .field label,
-.swatches label {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--g-t2);
-}
-
 .field__hint {
   font-size: 11px;
   color: var(--g-t3);
@@ -617,11 +533,6 @@ function submit(): void {
 }
 
 .field input:focus,
-.tags:focus-within {
-  border-color: var(--g-accent);
-  box-shadow: 0 0 0 3px var(--g-accent-ring);
-}
-
 .field input::placeholder {
   color: var(--g-t3);
 }
@@ -661,71 +572,11 @@ function submit(): void {
   background: var(--g-s2);
 }
 
-/* Tags — chips + saisie inline. */
-.tags {
-  min-height: 34px;
-  border-radius: 9px;
-  background: var(--g-s2);
-  border: 1px solid var(--g-border);
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-  padding: 0 9px;
-  transition:
-    border-color 0.12s ease-out,
-    box-shadow 0.12s ease-out;
-}
-
-.tags__chip {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin: 3px 0;
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--g-t1);
-  background: var(--g-s1);
-  border: 1px solid var(--g-border);
-  padding: 2px 6px 2px 8px;
-  border-radius: 999px;
-}
-
-.tags__x {
-  display: flex;
-  border: 0;
-  background: transparent;
-  color: var(--g-t3);
-  cursor: pointer;
-  padding: 0;
-}
-
-.tags__x:hover {
-  color: var(--g-danger);
-}
-
-.tags__input {
-  flex: 1;
-  min-width: 40px;
-  border: 0;
-  background: transparent;
-  font-family: inherit;
-  font-size: 12px;
-  color: var(--g-t1);
-  outline: none;
-}
-
-.tags__input::placeholder {
-  color: var(--g-t3);
-}
-
 /* Rangée couleur + favori. */
 .field--footer {
   grid-column: span 2;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
+  align-items: center;
   padding-top: 2px;
 }
 
@@ -746,41 +597,6 @@ function submit(): void {
   margin: 0;
   font-size: 11px;
   color: var(--g-t3);
-}
-
-.swatches {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.swatches__row {
-  display: flex;
-  gap: 7px;
-}
-
-.swatch {
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  border: 0;
-  cursor: pointer;
-  padding: 0;
-}
-
-.swatch--on {
-  box-shadow:
-    0 0 0 2px var(--g-s1),
-    0 0 0 4px var(--sw, var(--g-accent));
-}
-
-.swatch--auto {
-  background: var(--g-s2);
-  border: 1px solid var(--g-border-2);
-  color: var(--g-t2);
-  font-size: 11px;
-  font-weight: 700;
-  --sw: var(--g-border-2);
 }
 
 .fav {

@@ -25,6 +25,16 @@ const props = withDefaults(
 
 const info = computed(() => osInfo(props.os));
 
+/**
+ * Sans couleur choisie ni logo, la teinte est dérivée du nom : deux serveurs
+ * voisins restent distinguables d'un coup d'œil, et la pastille garde un fond.
+ */
+const fallbackColor = computed(() => {
+  let hue = 0;
+  for (const ch of props.name) hue = (hue * 31 + ch.charCodeAt(0)) % 360;
+  return `hsl(${hue} 65% 48%)`;
+});
+
 const initials = computed(() =>
   props.name
     .replace(/[^a-zA-Z0-9]/g, "")
@@ -47,7 +57,7 @@ const branded = computed(() => info.value !== null && !props.color);
     :style="{
       width: `${size}px`,
       height: `${size}px`,
-      background: branded ? undefined : (color ?? undefined),
+      background: branded ? undefined : (color ?? fallbackColor),
       color: branded ? undefined : fg,
     }"
     :title="info?.label ?? undefined"

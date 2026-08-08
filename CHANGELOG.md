@@ -16,6 +16,11 @@ projet applique le [versionnage sémantique](https://semver.org/lang/fr/).
   caractères. Onglets plats, barre d'état allégée.
 - Le rendu passe sur le GPU (WebGL), avec repli automatique sur le rendu DOM
   quand l'accélération n'est pas disponible.
+- **Fiche serveur allégée** : les tags et les pastilles de couleur quittent le
+  formulaire, qu'ils encombraient à la création pour un usage rare. Les valeurs
+  déjà enregistrées sont conservées, continuent de s'afficher et suivent les
+  sauvegardes ; seule leur saisie disparaît. À défaut de couleur choisie, la
+  pastille reprend une teinte dérivée du nom.
 
 ### Ajouté
 
