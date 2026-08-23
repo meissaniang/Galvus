@@ -262,14 +262,14 @@ pub fn terminal_open(
     state.open(app, session_id, "ssh".to_string(), args, cols, rows)
 }
 
-/// Envoie des données (frappes clavier) à une session.
+/// Envoie des données (frappes clavier, collage) à une session.
 #[tauri::command]
 pub fn terminal_write(
     state: tauri::State<'_, TerminalManager>,
     session_id: String,
     data: String,
 ) -> Result<(), AppError> {
-    state.write(&session_id, data.as_bytes())
+    state.write(&session_id, data.into_bytes())
 }
 
 /// Redimensionne le PTY d'une session.

@@ -4,12 +4,13 @@
 //! exécute le binaire `ssh` du système. `portable-pty` ne gère QUE le PTY : le
 //! protocole SSH reste entièrement délégué à OpenSSH (cf. CLAUDE.md).
 //!
-//! Cycle de vie : `open` (spawn + thread de lecture qui émet la sortie vers le
-//! frontend), `write` (frappes clavier), `resize` (redimensionnement), `close`
-//! (fin de session).
+//! Cycle de vie : `open` (spawn + un thread de lecture qui émet la sortie vers
+//! le frontend et un thread d'écriture qui alimente le PTY), `write` (frappes
+//! clavier et collage), `resize` (redimensionnement), `close` (fin de session).
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::sync::mpsc::{self, Sender};
 use std::sync::Mutex;
 
 use portable_pty::{Child, CommandBuilder, MasterPty, PtySize};
@@ -43,8 +44,33 @@ struct ExitPayload {
 /// Ressources d'une session vivante.
 struct Session {
     master: Box<dyn MasterPty + Send>,
-    writer: Box<dyn Write + Send>,
+    /// Entrée du thread d'écriture. On ne garde pas le writer ici : écrire dans
+    /// le PTY bloque tant que le distant n'a pas consommé, et le mutex des
+    /// sessions ne doit jamais être tenu pendant une attente (cf. `spawn_writer`).
+    input: Sender<Vec<u8>>,
     child: Box<dyn Child + Send + Sync>,
+}
+
+/// Démarre le thread qui pousse les octets reçus dans le PTY.
+///
+/// Le tampon d'un PTY fait quelques kilo-octets : au-delà, `write_all` bloque
+/// jusqu'à ce que le distant ait lu la suite — indéfiniment s'il ne lit plus
+/// (commande en cours). Sur le thread principal, cela gèle toute la fenêtre :
+/// c'est ce qui figeait l'application au collage d'un texte un peu long.
+///
+/// Le thread s'arrête tout seul quand la session est retirée du registre : le
+/// `Sender` disparaît, `recv` rend une erreur. Si l'écriture est bloquée à ce
+/// moment-là, `close` tue `ssh`, l'esclave se ferme et `write_all` rend EIO.
+fn spawn_writer(mut writer: Box<dyn Write + Send>) -> Sender<Vec<u8>> {
+    let (tx, rx) = mpsc::channel::<Vec<u8>>();
+    std::thread::spawn(move || {
+        while let Ok(chunk) = rx.recv() {
+            if writer.write_all(&chunk).is_err() || writer.flush().is_err() {
+                break;
+            }
+        }
+    });
+    tx
 }
 
 /// Registre des sessions actives, partagé comme état Tauri.
@@ -89,10 +115,11 @@ impl TerminalManager {
             .master
             .try_clone_reader()
             .map_err(|e| AppError::Command(e.to_string()))?;
-        let writer = pair
-            .master
-            .take_writer()
-            .map_err(|e| AppError::Command(e.to_string()))?;
+        let input = spawn_writer(
+            pair.master
+                .take_writer()
+                .map_err(|e| AppError::Command(e.to_string()))?,
+        );
 
         // Thread de lecture : relaie chaque fragment vers le frontend.
         let reader_app = app.clone();
@@ -127,7 +154,7 @@ impl TerminalManager {
 
         let session = Session {
             master: pair.master,
-            writer,
+            input,
             child,
         };
         log::info!("session terminal ouverte: {session_id}");
@@ -138,18 +165,14 @@ impl TerminalManager {
         Ok(())
     }
 
-    /// Transmet des octets (frappes clavier) à la session.
-    pub fn write(&self, session_id: &str, data: &[u8]) -> Result<(), AppError> {
-        let mut sessions = self.sessions.lock().expect("sessions mutex poisoned");
-        if let Some(session) = sessions.get_mut(session_id) {
-            session
-                .writer
-                .write_all(data)
-                .map_err(|e| AppError::Io(e.to_string()))?;
-            session
-                .writer
-                .flush()
-                .map_err(|e| AppError::Io(e.to_string()))?;
+    /// Transmet des octets (frappes clavier, collage) à la session.
+    ///
+    /// Se contente de les remettre au thread d'écriture : l'appel rend la main
+    /// immédiatement, quelle que soit la taille du collage.
+    pub fn write(&self, session_id: &str, data: Vec<u8>) -> Result<(), AppError> {
+        let sessions = self.sessions.lock().expect("sessions mutex poisoned");
+        if let Some(session) = sessions.get(session_id) {
+            let _ = session.input.send(data);
         }
         Ok(())
     }
