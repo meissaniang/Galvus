@@ -22,6 +22,11 @@ pub enum AppError {
 
     #[error("Base de données : {0}")]
     Database(String),
+
+    /// Opération refusée pour une raison que l'utilisateur peut corriger
+    /// (nom vide, doublon…). Le message est affiché tel quel.
+    #[error("{0}")]
+    Invalid(String),
 }
 
 impl From<std::io::Error> for AppError {

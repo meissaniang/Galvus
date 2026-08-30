@@ -17,6 +17,9 @@ const emit = defineEmits<{
   edit: [item: ServerItem];
   remove: [item: ServerItem];
   toggleFavorite: [item: ServerItem];
+  /** Début de glissement : le parent s'en sert pour ranger dans un dossier. */
+  dragstart: [item: ServerItem, event: DragEvent];
+  dragend: [];
 }>();
 
 /** Couleurs de pastille claires → texte encre foncée (règle AA du DS). */
@@ -41,7 +44,13 @@ const address = computed(() => {
 </script>
 
 <template>
-  <article class="tile" @dblclick="emit('connect', item)">
+  <article
+    class="tile"
+    draggable="true"
+    @dblclick="emit('connect', item)"
+    @dragstart="emit('dragstart', item, $event)"
+    @dragend="emit('dragend')"
+  >
     <OsBadge
       class="tile__ava"
       :os="item.os"
@@ -134,12 +143,17 @@ const address = computed(() => {
   border: 1px solid var(--g-border);
   border-radius: 12px;
   box-shadow: var(--g-sh1);
-  cursor: pointer;
+  /* La tuile se saisit à la souris pour être rangée dans un dossier. */
+  cursor: grab;
   transition:
     transform 0.14s cubic-bezier(0.2, 0.8, 0.3, 1),
     box-shadow 0.14s ease,
     background 0.14s ease,
     border-color 0.14s ease;
+}
+
+.tile:active {
+  cursor: grabbing;
 }
 
 .tile:hover {

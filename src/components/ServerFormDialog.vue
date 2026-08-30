@@ -14,6 +14,7 @@ import { pickFile } from "@/services/filePicker";
 const props = defineProps<{
   open: boolean;
   item: ServerItem | null;
+  /** Chemins des dossiers existants, proposés en autocomplétion. */
   groups?: string[];
   defaultGroup?: string | null;
   defaultSource?: ServerSource;
@@ -273,12 +274,12 @@ function submit(): void {
           </div>
 
           <div class="field">
-            <label>Groupe</label>
+            <label>Dossier</label>
             <input
               v-model="form.group"
               type="text"
               list="galvus-groups"
-              placeholder="Production"
+              placeholder="Production/Web"
             />
             <datalist id="galvus-groups">
               <option v-for="g in groups ?? []" :key="g" :value="g" />

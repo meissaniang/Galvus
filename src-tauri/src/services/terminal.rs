@@ -208,11 +208,26 @@ impl TerminalManager {
     }
 
     /// Termine la session et tue le processus enfant.
+    ///
+    /// Le recueil du processus se fait sur un thread, hors du mutex : c'est le
+    /// chemin qu'emprunte la fermeture d'un pane dont la liaison est morte, et
+    /// `ssh` peut alors mettre un instant à rendre la main. Sans ce `wait`, il
+    /// resterait zombie jusqu'à la fermeture de l'application.
     pub fn close(&self, session_id: &str) -> Result<(), AppError> {
-        let mut sessions = self.sessions.lock().expect("sessions mutex poisoned");
-        if let Some(mut session) = sessions.remove(session_id) {
+        let removed = self
+            .sessions
+            .lock()
+            .expect("sessions mutex poisoned")
+            .remove(session_id);
+        if let Some(mut session) = removed {
             let _ = session.child.kill();
-            log::info!("session terminal fermée: {session_id}");
+            let id = session_id.to_string();
+            std::thread::spawn(move || {
+                let _ = session.child.wait();
+                // Le master tombe ici : le PTY se ferme, le thread de lecture
+                // sort de `read` et le thread d'écriture de `recv`.
+                log::info!("session terminal fermée: {id}");
+            });
         }
         Ok(())
     }

@@ -56,6 +56,16 @@ impl Database {
         ensure_column(conn, "servers", "group_name", "TEXT")?;
         ensure_column(conn, "servers", "os", "TEXT")?;
 
+        // Dossiers de l'écran Serveurs. Le chemin complet fait office d'identité :
+        // c'est la seule référence que le `~/.ssh/config` sait aussi porter.
+        conn.execute_batch(
+            "CREATE TABLE IF NOT EXISTS groups (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                path       TEXT    NOT NULL UNIQUE,
+                created_at TEXT    NOT NULL DEFAULT (datetime('now'))
+            );",
+        )?;
+
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS tunnels (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,

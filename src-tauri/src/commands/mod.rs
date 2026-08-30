@@ -1,6 +1,6 @@
 //! Commandes Tauri exposées au frontend (#[tauri::command]). Couche mince : délègue aux services.
 
-use crate::database::{servers_repository, tunnels_repository, Database};
+use crate::database::{groups_repository, servers_repository, tunnels_repository, Database};
 use crate::errors::AppError;
 use crate::models::{ConfigHostInput, Host, Server, ServerInput, SshKey, Tunnel, TunnelInput};
 use crate::services::terminal::TerminalManager;
@@ -191,6 +191,49 @@ pub fn server_delete(db: tauri::State<'_, Database>, id: i64) -> Result<(), AppE
     servers_repository::delete(&conn, id)
 }
 
+/// Liste les chemins de tous les dossiers de serveurs.
+#[tauri::command]
+pub fn group_list(db: tauri::State<'_, Database>) -> Result<Vec<String>, AppError> {
+    let conn = db.conn.lock().expect("db mutex poisoned");
+    groups_repository::list(&conn)
+}
+
+/// Crée un dossier (et ses parents manquants). Rend son chemin normalisé.
+#[tauri::command]
+pub fn group_create(db: tauri::State<'_, Database>, path: String) -> Result<String, AppError> {
+    let conn = db.conn.lock().expect("db mutex poisoned");
+    groups_repository::create(&conn, &path)
+}
+
+/// Renomme un dossier. Rend son nouveau chemin.
+#[tauri::command]
+pub fn group_rename(
+    db: tauri::State<'_, Database>,
+    path: String,
+    name: String,
+) -> Result<String, AppError> {
+    let conn = db.conn.lock().expect("db mutex poisoned");
+    groups_repository::rename(&conn, &path, &name)
+}
+
+/// Déplace un dossier sous un autre (`parent` vide = racine).
+#[tauri::command]
+pub fn group_move(
+    db: tauri::State<'_, Database>,
+    path: String,
+    parent: String,
+) -> Result<String, AppError> {
+    let conn = db.conn.lock().expect("db mutex poisoned");
+    groups_repository::move_to(&conn, &path, &parent)
+}
+
+/// Supprime un dossier et ses sous-dossiers ; leurs serveurs remontent au parent.
+#[tauri::command]
+pub fn group_delete(db: tauri::State<'_, Database>, path: String) -> Result<(), AppError> {
+    let conn = db.conn.lock().expect("db mutex poisoned");
+    groups_repository::delete(&conn, &path)
+}
+
 /// Liste les tunnels enregistrés.
 #[tauri::command]
 pub fn tunnel_list(db: tauri::State<'_, Database>) -> Result<Vec<Tunnel>, AppError> {
@@ -250,6 +293,8 @@ pub fn tunnel_running(manager: tauri::State<'_, TunnelManager>) -> Result<Vec<i6
 ///
 /// `args` sont les arguments passés à `ssh` (ex. `["vps-meissa-1"]` pour un hôte
 /// du config, ou `["-p", "2222", "-i", "/path", "user@host"]` pour un serveur).
+/// Les options de résilience (cf. `ssh::with_resilience`) sont ajoutées ici, à
+/// un seul endroit : toute session en bénéficie, quelle que soit son origine.
 #[tauri::command]
 pub fn terminal_open(
     app: tauri::AppHandle,
@@ -259,6 +304,7 @@ pub fn terminal_open(
     cols: u16,
     rows: u16,
 ) -> Result<(), AppError> {
+    let args = crate::ssh::with_resilience(args);
     state.open(app, session_id, "ssh".to_string(), args, cols, rows)
 }
 

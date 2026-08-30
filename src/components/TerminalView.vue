@@ -18,7 +18,21 @@ const emit = defineEmits<{ osDetected: [os: string]; finished: [] }>();
 const settings = useSettingsStore();
 
 const container = ref<HTMLDivElement | null>(null);
-const sessionId = crypto.randomUUID();
+
+/**
+ * Identifiant de la session en cours. Il change à chaque reconnexion : le pane
+ * survit à la session, pas l'inverse, et les events portent l'identifiant qui
+ * permet de rejeter ceux d'une session déjà remplacée.
+ */
+const sessionId = ref(crypto.randomUUID());
+
+/**
+ * État de la liaison. `ended` couvre toute fin non nominale (lien coupé, hôte
+ * injoignable, veille de la machine) : le pane reste à l'écran, montre la
+ * raison et propose de relancer, au lieu de figer sur un écran mort.
+ */
+const status = ref<"connecting" | "connected" | "ended">("connecting");
+const exitCode = ref<number | null>(null);
 
 let term: Terminal | null = null;
 let fit: FitAddon | null = null;
@@ -103,6 +117,44 @@ function onContainerKeydown(event: KeyboardEvent): void {
   }
 }
 
+// ---------- Cycle de vie de la session ----------
+
+/**
+ * Lance `ssh` et bascule le pane en « connecté ».
+ *
+ * L'échec du lancement lui-même (binaire `ssh` introuvable, PTY refusé) n'émet
+ * aucun `terminal://exit` : il faut le rendre visible ici, sans quoi le pane
+ * resterait indéfiniment sur « connexion… ».
+ */
+async function startSession(): Promise<void> {
+  if (!term) return;
+  status.value = "connecting";
+  try {
+    await terminalRepository.open(sessionId.value, props.args, term.cols, term.rows);
+    status.value = "connected";
+    term.focus();
+  } catch (error) {
+    exitCode.value = null;
+    status.value = "ended";
+    term.write(`\r\n\x1b[38;2;255;83;112m── ${String(error)} ──\x1b[0m\r\n`);
+  }
+}
+
+/**
+ * Relance une session sur la même cible, dans le même pane.
+ *
+ * Le scrollback est conservé : après une coupure, ce qui précède reste la seule
+ * trace de ce qu'on était en train de faire.
+ */
+async function reconnect(): Promise<void> {
+  if (status.value !== "ended" || !term) return;
+  sessionId.value = crypto.randomUUID();
+  banner = new BannerCollector();
+  exitCode.value = null;
+  term.write("\r\n\x1b[38;2;130;170;255m── reconnexion… ──\x1b[0m\r\n");
+  await startSession();
+}
+
 onMounted(async () => {
   if (!container.value) return;
 
@@ -155,7 +207,7 @@ onMounted(async () => {
 
   // Écoute AVANT l'ouverture de session pour ne rien manquer (bannière SSH…).
   unlistenOutput = await terminalRepository.onOutput((payload) => {
-    if (payload.sessionId !== sessionId || !term) return;
+    if (payload.sessionId !== sessionId.value || !term) return;
     const bytes = new Uint8Array(payload.data);
     term.write(bytes);
 
@@ -166,7 +218,7 @@ onMounted(async () => {
     }
   });
   unlistenExit = await terminalRepository.onExit((payload) => {
-    if (payload.sessionId !== sessionId || !term) return;
+    if (payload.sessionId !== sessionId.value || !term) return;
     banner?.stop();
 
     // Déconnexion normale : le pane n'a plus rien à montrer, il se ferme.
@@ -176,22 +228,32 @@ onMounted(async () => {
     }
 
     // Échec en revanche : la sortie porte la raison — hôte injoignable, clé
-    // refusée… Fermer ici escamoterait le seul message utile.
+    // refusée, lien coupé (255 après l'expiration des sondes ServerAlive).
+    // Fermer ici escamoterait le seul message utile ; le pane passe en
+    // « interrompue » et offre la reconnexion.
+    exitCode.value = payload.code;
+    status.value = "ended";
     const reason = payload.code === null ? "" : ` (code ${payload.code})`;
     term.write(`\r\n\x1b[38;2;255;83;112m── session interrompue${reason} ──\x1b[0m\r\n`);
   });
 
   term.onData((data) => {
-    terminalRepository.write(sessionId, data);
+    // Session morte : les frappes n'ont plus de destinataire. Les envoyer
+    // quand même les ferait disparaître en silence — l'impression de gel.
+    // Entrée relance, le reste ne fait rien.
+    if (status.value === "ended") {
+      if (data === "\r") void reconnect();
+      return;
+    }
+    terminalRepository.write(sessionId.value, data);
   });
 
-  await terminalRepository.open(sessionId, props.args, term.cols, term.rows);
-  term.focus();
+  await startSession();
 
   resizeObserver = new ResizeObserver(() => {
     if (!fit || !term) return;
     fit.fit();
-    terminalRepository.resize(sessionId, term.cols, term.rows);
+    terminalRepository.resize(sessionId.value, term.cols, term.rows);
   });
   resizeObserver.observe(container.value);
 
@@ -211,7 +273,7 @@ onMounted(async () => {
       term.options.lineHeight = lineHeight;
       term.options.cursorBlink = blink;
       fit.fit();
-      terminalRepository.resize(sessionId, term.cols, term.rows);
+      terminalRepository.resize(sessionId.value, term.cols, term.rows);
     },
   );
 });
@@ -222,7 +284,7 @@ onBeforeUnmount(async () => {
   resizeObserver?.disconnect();
   unlistenOutput?.();
   unlistenExit?.();
-  await terminalRepository.close(sessionId);
+  await terminalRepository.close(sessionId.value);
   term?.dispose();
 });
 
@@ -232,6 +294,23 @@ defineExpose({ openSearch, focus: () => term?.focus() });
 <template>
   <div class="terminal-view" @keydown="onContainerKeydown">
     <div ref="container" class="terminal-view__screen" />
+
+    <!--
+      Barre de reprise : posée sur la sortie, qui reste lisible et défilable.
+      C'est le seul chemin de retour après une coupure — sans elle, le pane est
+      indistinguable d'un terminal figé.
+    -->
+    <Transition name="search">
+      <div v-if="status === 'ended'" class="dead">
+        <span class="dead__dot" />
+        <span class="dead__text">
+          Session interrompue<template v-if="exitCode !== null">
+            · code {{ exitCode }}</template
+          >
+        </span>
+        <button class="dead__action" @click="reconnect">Reconnecter ⏎</button>
+      </div>
+    </Transition>
 
     <Transition name="search">
       <div v-if="searchOpen" class="search">
@@ -344,6 +423,60 @@ defineExpose({ openSearch, focus: () => term?.focus() });
 .terminal-view :deep(.xterm-link-layer) a:hover {
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* ---------- Session interrompue ---------- */
+.dead {
+  position: absolute;
+  bottom: 10px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 10px;
+  border-radius: 9px;
+  background: rgba(42, 42, 42, 0.96);
+  border: 1px solid #4a3436;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 38%);
+  backdrop-filter: blur(8px);
+  font-family: var(--g-font-mono);
+  font-size: 11.5px;
+}
+
+.dead__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--g-danger);
+  flex-shrink: 0;
+}
+
+.dead__text {
+  color: #b0b0b0;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dead__action {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: #3a3a3a;
+  color: #eeffff;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dead__action:hover {
+  background: var(--g-accent);
+  color: #ffffff;
 }
 
 /* ---------- Recherche ---------- */

@@ -1,39 +1,57 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
 import { useServersStore } from "@/stores/servers";
 import { useMyServersStore } from "@/stores/myServers";
 import { useConnectionsStore } from "@/stores/connections";
+import { useGroupsStore } from "@/stores/groups";
 import { useSettingsStore } from "@/stores/settings";
 import ServerCard from "@/components/ServerCard.vue";
 import OsBadge from "@/components/OsBadge.vue";
 import ServerFormDialog, {
   type ServerFormResult,
 } from "@/components/ServerFormDialog.vue";
+import GroupDialog from "@/components/GroupDialog.vue";
 import type { Host, Server, ServerItem, ServerSource } from "@/types/ssh";
 import { shortcut } from "@/utils/platform";
+import {
+  ancestorsOf,
+  isWithin,
+  joinPath,
+  nameOf,
+  normalizePath,
+  parentOf,
+} from "@/utils/groupPath";
 
 /**
  * Écran Serveurs — implémentation fidèle de « ScreenServers.dc.html ».
  *
  * Les entrées de la base chiffrée et celles du `~/.ssh/config` sont ramenées à
- * une vue commune (`ServerItem`) : même carte, mêmes groupes, mêmes actions.
+ * une vue commune (`ServerItem`) : même carte, mêmes dossiers, mêmes actions.
  * Seule une pastille « config » distingue l'origine.
+ *
+ * Les groupes se parcourent comme des dossiers : on entre dans l'un d'eux, on
+ * y voit ses sous-dossiers et ses serveurs. La recherche, elle, traverse toute
+ * l'arborescence — chercher ne doit pas obliger à savoir où l'on a rangé.
  */
 const hostsStore = useServersStore();
 const myServers = useMyServersStore();
 const connections = useConnectionsStore();
+const groups = useGroupsStore();
 const settings = useSettingsStore();
 const router = useRouter();
 
 const { hosts, loading: hostsLoading, error: hostsError } = storeToRefs(hostsStore);
 const { servers, error: serversError } = storeToRefs(myServers);
+const { error: groupsError } = storeToRefs(groups);
 const { serversView, serversSort } = storeToRefs(settings);
 
 const search = ref("");
 const searchInput = ref<HTMLInputElement | null>(null);
-const collapsed = reactive(new Set<string>());
+
+/** Dossier ouvert. Chaîne vide à la racine. */
+const cwd = ref("");
 
 // --- Normalisation des deux sources ---
 function fromServer(s: Server): ServerItem {
@@ -108,67 +126,221 @@ const sortedItems = computed<ServerItem[]>(() => {
 });
 
 /**
- * Section d'affichage d'un serveur.
+ * Tous les dossiers connus, triés.
  *
- * Les entrées du `~/.ssh/config` sont d'abord rangées par fichier de
- * déclaration : avec des `Include`, savoir d'où vient un hôte vaut mieux qu'un
- * « Sans groupe » qui les mélangerait tous. Le groupe s'y ajoute quand il y en
- * a un. Les serveurs de la base chiffrée gardent le comportement d'origine.
+ * Deux origines les nourrissent : ceux créés explicitement (table `groups`,
+ * seule à savoir garder un dossier vide) et ceux déduits du chemin des
+ * serveurs — un hôte du `~/.ssh/config` peut arriver avec un `group=` que la
+ * base n'a jamais vu.
  */
+const folders = computed<string[]>(() => {
+  const known = new Set(groups.paths);
+  for (const item of allItems.value) {
+    for (const ancestor of ancestorsOf(normalizePath(item.group))) known.add(ancestor);
+  }
+  return [...known].sort((a, b) => a.localeCompare(b));
+});
+
+/** Nombre de serveurs rangés dans un dossier, sous-dossiers compris. */
+function countIn(path: string): number {
+  return allItems.value.filter((item) => isWithin(normalizePath(item.group), path))
+    .length;
+}
+
+/** Contenu d'un dossier, en toutes lettres. */
+function countLabel(count: number): string {
+  if (count === 0) return "Vide";
+  return `${count} serveur${count > 1 ? "s" : ""}`;
+}
+
+/** Sous-dossiers directs du dossier ouvert. */
+const subfolders = computed(() =>
+  folders.value
+    .filter((path) => parentOf(path) === cwd.value)
+    .map((path) => ({ path, name: nameOf(path), count: countIn(path) })),
+);
+
+const searching = computed(() => search.value.trim() !== "");
+
+/** Fil d'Ariane : la racine, puis chaque niveau ouvert. */
+const breadcrumb = computed(() => [
+  { label: "Serveurs", path: "" },
+  ...ancestorsOf(cwd.value).map((path) => ({ label: nameOf(path), path })),
+]);
+
+/** Un lot de serveurs à afficher, avec le dossier d'où il vient. */
 interface Section {
-  key: string;
+  path: string;
   label: string;
-  /** Groupe réel, sans le fichier : c'est lui qu'un nouveau serveur héritera. */
-  group: string | null;
-  source: ServerSource;
   items: ServerItem[];
 }
 
-function sectionKey(item: ServerItem): string {
-  if (item.source !== "config") return item.group ?? "";
-  const file = item.sourceFile ?? "~/.ssh/config";
-  return item.group ? `${file} › ${item.group}` : file;
-}
-
+/**
+ * Ce que la liste affiche : le contenu du dossier ouvert, ou — en recherche —
+ * les résultats de toute l'arborescence, regroupés par dossier d'origine.
+ *
+ * Un seul chemin de rendu pour les deux cas : la grille et la liste n'ont pas
+ * à savoir laquelle des deux situations les alimente.
+ */
 const sections = computed<Section[]>(() => {
-  const map = new Map<string, Section>();
-  for (const item of sortedItems.value) {
-    const key = sectionKey(item);
-    let section = map.get(key);
-    if (!section) {
-      section = {
-        key,
-        label: key || "Sans groupe",
-        group: item.group,
-        source: item.source,
-        items: [],
-      };
-      map.set(key, section);
-    }
-    section.items.push(item);
+  if (!searching.value) {
+    const items = sortedItems.value.filter(
+      (item) => normalizePath(item.group) === cwd.value,
+    );
+    return [{ path: cwd.value, label: "", items }];
   }
-  return [...map.values()].sort((a, b) => {
-    if (a.key === "") return 1;
-    if (b.key === "") return -1;
-    return a.key.localeCompare(b.key);
-  });
+  const map = new Map<string, ServerItem[]>();
+  for (const item of sortedItems.value) {
+    const path = normalizePath(item.group);
+    const bucket = map.get(path);
+    if (bucket) bucket.push(item);
+    else map.set(path, [item]);
+  }
+  return [...map.entries()]
+    .map(([path, items]) => ({ path, label: path || "Serveurs", items }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 });
 
-const groupNames = computed(() =>
-  [
-    ...new Set(allItems.value.map((i) => i.group).filter((g): g is string => Boolean(g))),
-  ].sort(),
+/** Nombre de serveurs actuellement affichés, toutes sections confondues. */
+const visibleCount = computed(() =>
+  sections.value.reduce((total, section) => total + section.items.length, 0),
 );
+
+/**
+ * Vrai quand il n'y a rigoureusement rien à montrer.
+ *
+ * Dans ce cas l'encart d'état vide remplace la carte « Ajouter » : deux
+ * invitations à créer, l'une sous l'autre, ne valent pas mieux qu'une.
+ */
+const showEmpty = computed(
+  () =>
+    !hostsLoading.value &&
+    visibleCount.value === 0 &&
+    (searching.value || subfolders.value.length === 0),
+);
+
+function enter(path: string): void {
+  search.value = "";
+  cwd.value = path;
+}
+
+// Le dossier ouvert peut disparaître sous nos pieds (suppression, renommage
+// depuis un autre écran) : on remonte au plus proche ancêtre encore présent
+// plutôt que d'afficher un dossier fantôme.
+watch(folders, (list) => {
+  if (!cwd.value || list.includes(cwd.value)) return;
+  cwd.value =
+    ancestorsOf(cwd.value)
+      .filter((path) => list.includes(path))
+      .pop() ?? "";
+});
+
+// --- Dossiers : création, renommage, suppression ---
+const folderDialog = reactive({
+  open: false,
+  mode: "create" as "create" | "rename",
+  /** Dossier parent à la création, dossier visé au renommage. */
+  path: "",
+});
+
+function openNewFolder(): void {
+  groups.error = null;
+  folderDialog.mode = "create";
+  folderDialog.path = cwd.value;
+  folderDialog.open = true;
+}
+
+function openRenameFolder(path: string): void {
+  groups.error = null;
+  folderDialog.mode = "rename";
+  folderDialog.path = path;
+  folderDialog.open = true;
+}
+
+async function onFolderSubmit(name: string): Promise<void> {
+  try {
+    if (folderDialog.mode === "create") {
+      await groups.create(joinPath(folderDialog.path, name));
+    } else {
+      const renamed = await groups.rename(folderDialog.path, name);
+      // Suivre le renommage quand il touche le dossier ouvert ou l'un de ses
+      // ancêtres : rester sur l'ancien chemin afficherait un dossier vide.
+      if (isWithin(cwd.value, folderDialog.path)) {
+        cwd.value = renamed + cwd.value.slice(folderDialog.path.length);
+      }
+    }
+    folderDialog.open = false;
+  } catch {
+    /* message affiché dans le dialog */
+  }
+}
+
+async function removeFolder(path: string): Promise<void> {
+  const count = countIn(path);
+  const parent = parentOf(path);
+  const destination = parent ? `« ${nameOf(parent)} »` : "la racine";
+  const consequence =
+    count === 0
+      ? ""
+      : `\n\nSes ${count} serveur${count > 1 ? "s" : ""} ${
+          count > 1 ? "remonteront" : "remontera"
+        } dans ${destination} : rien n'est supprimé.`;
+  if (!window.confirm(`Supprimer le dossier « ${nameOf(path)} » ?${consequence}`)) return;
+  await groups.remove(path);
+}
+
+// --- Glisser-déposer : ranger un serveur dans un dossier ---
+/** Serveur en cours de glissement, ou `null`. */
+const dragged = ref<ServerItem | null>(null);
+/** Dossier survolé pendant le glissement ; `""` pour la racine, `null` si aucun. */
+const dropTarget = ref<string | null>(null);
+
+/** Un dossier n'accepte le serveur que s'il ne s'y trouve pas déjà. */
+function accepts(path: string): boolean {
+  return dragged.value !== null && normalizePath(dragged.value.group) !== path;
+}
+
+function onDragStart(item: ServerItem, event: DragEvent): void {
+  dragged.value = item;
+  dropTarget.value = null;
+  // Sans données, Safari/WebKit refuse d'amorcer le glissement.
+  event.dataTransfer?.setData("text/plain", item.key);
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+}
+
+function onDragEnd(): void {
+  dragged.value = null;
+  dropTarget.value = null;
+}
+
+/** Le dépôt n'est autorisé que si `preventDefault` est appelé ici. */
+function onDragOver(path: string, event: DragEvent): void {
+  if (!accepts(path)) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  dropTarget.value = path;
+}
+
+function onDragLeave(path: string, event: DragEvent): void {
+  // Passer sur un enfant déclenche un `dragleave` sur le parent : on n'éteint
+  // la surbrillance que si le curseur a vraiment quitté la zone.
+  const zone = event.currentTarget as HTMLElement;
+  const to = event.relatedTarget as Node | null;
+  if (to && zone.contains(to)) return;
+  if (dropTarget.value === path) dropTarget.value = null;
+}
+
+async function onDrop(path: string): Promise<void> {
+  const item = dragged.value;
+  onDragEnd();
+  if (!item || normalizePath(item.group) === path) return;
+  await onSave(resultFrom(item, { group: path || null }));
+}
 
 /** Libellés des sessions ouvertes → point vert « connecté » sur les cartes. */
 const connectedLabels = computed(
   () => new Set(connections.tabs.flatMap((t) => t.panes.map((p) => p.label))),
 );
-
-function toggleGroup(name: string): void {
-  if (collapsed.has(name)) collapsed.delete(name);
-  else collapsed.add(name);
-}
 
 // --- Connexion ---
 function connect(item: ServerItem): void {
@@ -191,12 +363,11 @@ const editingItem = ref<ServerItem | null>(null);
 const dialogGroup = ref<string | null>(null);
 const dialogSource = ref<ServerSource>("local");
 
-function openNew(group: string | null = null, source: ServerSource = "local"): void {
+/** Un nouveau serveur naît dans le dossier ouvert : c'est ce qu'on attend. */
+function openNew(): void {
   editingItem.value = null;
-  dialogGroup.value = group;
-  // Ajouter depuis une section du fichier de config y crée l'entrée : c'est
-  // ce que le contexte laisse attendre.
-  dialogSource.value = source;
+  dialogGroup.value = cwd.value || null;
+  dialogSource.value = "local";
   dialogOpen.value = true;
 }
 
@@ -257,6 +428,9 @@ async function onSave(result: ServerFormResult): Promise<void> {
         }
       }
     }
+    // Un dossier tapé dans le formulaire doit exister pour lui survivre : sans
+    // cela, il s'évaporerait dès que son dernier serveur en sortirait.
+    await groups.ensure(result.group);
     dialogOpen.value = false;
   } catch {
     /* erreur affichée par le store correspondant */
@@ -270,8 +444,18 @@ async function onRemove(item: ServerItem): Promise<void> {
   else if (item.id !== null) await myServers.remove(item.id);
 }
 
-async function toggleFavorite(item: ServerItem): Promise<void> {
-  await onSave({
+/**
+ * Réécrit une fiche existante en ne changeant que les champs passés.
+ *
+ * Déplacer un serveur ou basculer son favori passe par le même chemin
+ * d'enregistrement qu'une édition au formulaire : une seule règle de mise à
+ * jour, valable pour les deux origines.
+ */
+function resultFrom(
+  item: ServerItem,
+  changes: Partial<ServerFormResult>,
+): ServerFormResult {
+  return {
     source: item.source,
     previousSource: item.source,
     id: item.id,
@@ -282,11 +466,16 @@ async function toggleFavorite(item: ServerItem): Promise<void> {
     username: item.username,
     identityFile: item.identityFile,
     color: item.color,
-    favorite: !item.favorite,
+    favorite: item.favorite,
     tags: item.tags,
     group: item.group,
     os: item.os,
-  });
+    ...changes,
+  };
+}
+
+async function toggleFavorite(item: ServerItem): Promise<void> {
+  await onSave(resultFrom(item, { favorite: !item.favorite }));
 }
 
 /** ⌘K / Ctrl+K : focus sur la recherche. */
@@ -302,6 +491,7 @@ onMounted(() => {
   window.addEventListener("keydown", onKeydown);
   if (hosts.value.length === 0) hostsStore.load();
   if (servers.value.length === 0) myServers.load();
+  groups.load();
 });
 onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 
@@ -398,115 +588,230 @@ function addressOf(item: ServerItem): string {
       <p v-if="serversError" class="state state--error">{{ serversError }}</p>
       <p v-if="hostsError" class="state state--error">{{ hostsError }}</p>
 
-      <section v-for="section in sections" :key="section.key || '__none'" class="group">
-        <header class="group__head">
-          <button
-            class="group__chevron"
-            :class="{ 'group__chevron--closed': collapsed.has(section.key) }"
-            @click="toggleGroup(section.key)"
+      <!-- Fil d'Ariane : où l'on se trouve, et les actions du dossier -->
+      <nav class="crumbs">
+        <template v-for="(crumb, index) in breadcrumb" :key="crumb.path || '__root'">
+          <svg
+            v-if="index > 0"
+            class="crumbs__sep"
+            width="10"
+            height="10"
+            viewBox="0 0 12 12"
+            fill="none"
           >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path
+              d="M4.4 2.6l3.2 3.4-3.2 3.4"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <button
+            class="crumbs__item"
+            :class="{
+              'crumbs__item--current': index === breadcrumb.length - 1,
+              'crumbs__item--over': dropTarget === crumb.path,
+            }"
+            @click="enter(crumb.path)"
+            @dragover="onDragOver(crumb.path, $event)"
+            @dragleave="onDragLeave(crumb.path, $event)"
+            @drop.prevent="onDrop(crumb.path)"
+          >
+            {{ crumb.label }}
+          </button>
+        </template>
+
+        <span class="crumbs__line" />
+
+        <template v-if="cwd">
+          <button class="crumbs__act" @click="openRenameFolder(cwd)">Renommer</button>
+          <button class="crumbs__act crumbs__act--danger" @click="removeFolder(cwd)">
+            Supprimer
+          </button>
+        </template>
+        <button class="crumbs__act crumbs__act--new" @click="openNewFolder">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path
+              d="M7 3.6v6.8M3.6 7h6.8"
+              stroke="currentColor"
+              stroke-width="1.7"
+              stroke-linecap="round"
+            />
+          </svg>
+          Nouveau dossier
+        </button>
+      </nav>
+
+      <p v-if="groupsError" class="state state--error">{{ groupsError }}</p>
+
+      <!-- Sous-dossiers du dossier ouvert -->
+      <div
+        v-if="!searching && subfolders.length"
+        :class="serversView === 'grid' ? 'grid' : 'rows'"
+      >
+        <div
+          v-for="folder in subfolders"
+          :key="folder.path"
+          class="folder"
+          :class="[
+            serversView === 'grid' ? 'folder--tile' : 'folder--row',
+            { 'folder--over': dropTarget === folder.path },
+          ]"
+          role="button"
+          tabindex="0"
+          @click="enter(folder.path)"
+          @keydown.enter.prevent="enter(folder.path)"
+          @keydown.space.prevent="enter(folder.path)"
+          @dragover="onDragOver(folder.path, $event)"
+          @dragleave="onDragLeave(folder.path, $event)"
+          @drop.prevent="onDrop(folder.path)"
+        >
+          <span class="folder__ava">
+            <svg viewBox="0 0 18 18" fill="none">
               <path
-                d="M3 4.6l3 3 3-3"
+                d="M2.4 5.2a1.8 1.8 0 011.8-1.8h2.6l1.6 1.9h5.4a1.8 1.8 0 011.8 1.8v5.7a1.8 1.8 0 01-1.8 1.8H4.2a1.8 1.8 0 01-1.8-1.8z"
                 stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
+                stroke-width="1.3"
+                stroke-linejoin="round"
               />
             </svg>
-          </button>
-          <span class="group__name">{{ section.label }}</span>
-          <span class="group__count">{{ section.items.length }}</span>
-          <span class="group__line" />
-        </header>
-
-        <template v-if="!collapsed.has(section.key)">
-          <!-- Vue grille -->
-          <div v-if="serversView === 'grid'" class="grid">
-            <ServerCard
-              v-for="item in section.items"
-              :key="item.key"
-              :item="item"
-              :connected="connectedLabels.has(item.name)"
-              @connect="connect"
-              @edit="openEdit"
-              @remove="onRemove"
-              @toggle-favorite="toggleFavorite"
-            />
-            <button class="addcard" @click="openNew(section.group, section.source)">
-              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+          </span>
+          <span class="folder__body">
+            <span class="folder__name">{{ folder.name }}</span>
+            <span class="folder__count">{{ countLabel(folder.count) }}</span>
+          </span>
+          <span class="folder__actions">
+            <button
+              class="folder__act"
+              title="Renommer"
+              @click.stop="openRenameFolder(folder.path)"
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
                 <path
-                  d="M7 2.4v9.2M2.4 7h9.2"
+                  d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z"
                   stroke="currentColor"
-                  stroke-width="1.7"
+                  stroke-width="1.4"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <button
+              class="folder__act folder__act--danger"
+              title="Supprimer"
+              @click.stop="removeFolder(folder.path)"
+            >
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                <path
+                  d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4"
+                  stroke="currentColor"
+                  stroke-width="1.3"
                   stroke-linecap="round"
                 />
               </svg>
-              {{ section.group ? `Ajouter à ${section.group}` : "Ajouter un serveur" }}
             </button>
-          </div>
+          </span>
+        </div>
+      </div>
 
-          <!-- Vue liste -->
-          <div v-else class="rows">
-            <div
-              v-for="item in section.items"
-              :key="item.key"
-              class="row"
-              @dblclick="connect(item)"
-            >
-              <OsBadge
-                class="row__ava"
-                :os="item.os"
-                :name="item.name"
-                :color="item.color"
-                :size="24"
+      <!-- Serveurs : contenu du dossier, ou résultats de recherche par dossier -->
+      <section v-for="section in sections" :key="section.path || '__root'" class="group">
+        <header v-if="searching && section.items.length" class="group__head">
+          <span class="group__name">{{ section.label }}</span>
+          <span class="group__count">{{ section.items.length }}</span>
+          <span class="group__line" />
+          <button class="group__open" @click="enter(section.path)">
+            Ouvrir le dossier
+          </button>
+        </header>
+
+        <!-- Vue grille -->
+        <div v-if="serversView === 'grid'" class="grid">
+          <ServerCard
+            v-for="item in section.items"
+            :key="item.key"
+            :item="item"
+            :connected="connectedLabels.has(item.name)"
+            @connect="connect"
+            @edit="openEdit"
+            @remove="onRemove"
+            @toggle-favorite="toggleFavorite"
+            @dragstart="onDragStart"
+            @dragend="onDragEnd"
+          />
+          <button v-if="!searching && !showEmpty" class="addcard" @click="openNew()">
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+              <path
+                d="M7 2.4v9.2M2.4 7h9.2"
+                stroke="currentColor"
+                stroke-width="1.7"
+                stroke-linecap="round"
               />
-              <span class="row__name">
-                {{ item.name }}
-                <span v-if="connectedLabels.has(item.name)" class="row__dot" />
-                <span v-if="item.source === 'config'" class="row__origin">config</span>
-              </span>
-              <span class="row__addr">{{ addressOf(item) }}</span>
-              <span class="row__tags">
-                <span v-for="tag in item.tags" :key="tag" class="row__tag">{{
-                  tag
-                }}</span>
-              </span>
-              <span class="row__actions">
-                <button class="row__connect" @click.stop="connect(item)">
-                  Connecter
-                </button>
-                <button class="row__icon" title="Éditer" @click.stop="openEdit(item)">
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                    <path
-                      d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z"
-                      stroke="currentColor"
-                      stroke-width="1.4"
-                      stroke-linejoin="round"
-                    />
-                  </svg>
-                </button>
-                <button
-                  class="row__icon row__icon--danger"
-                  title="Supprimer"
-                  @click.stop="onRemove(item)"
-                >
-                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
-                    <path
-                      d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4"
-                      stroke="currentColor"
-                      stroke-width="1.3"
-                      stroke-linecap="round"
-                    />
-                  </svg>
-                </button>
-              </span>
-            </div>
+            </svg>
+            {{ cwd ? `Ajouter à ${nameOf(cwd)}` : "Ajouter un serveur" }}
+          </button>
+        </div>
+
+        <!-- Vue liste -->
+        <div v-else class="rows">
+          <div
+            v-for="item in section.items"
+            :key="item.key"
+            class="row"
+            draggable="true"
+            @dblclick="connect(item)"
+            @dragstart="onDragStart(item, $event)"
+            @dragend="onDragEnd"
+          >
+            <OsBadge
+              class="row__ava"
+              :os="item.os"
+              :name="item.name"
+              :color="item.color"
+              :size="24"
+            />
+            <span class="row__name">
+              {{ item.name }}
+              <span v-if="connectedLabels.has(item.name)" class="row__dot" />
+              <span v-if="item.source === 'config'" class="row__origin">config</span>
+            </span>
+            <span class="row__addr">{{ addressOf(item) }}</span>
+            <span class="row__tags">
+              <span v-for="tag in item.tags" :key="tag" class="row__tag">{{ tag }}</span>
+            </span>
+            <span class="row__actions">
+              <button class="row__connect" @click.stop="connect(item)">Connecter</button>
+              <button class="row__icon" title="Éditer" @click.stop="openEdit(item)">
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <path
+                    d="M9.4 2.4l2.2 2.2-6.4 6.4-2.8.6.6-2.8z"
+                    stroke="currentColor"
+                    stroke-width="1.4"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+              <button
+                class="row__icon row__icon--danger"
+                title="Supprimer"
+                @click.stop="onRemove(item)"
+              >
+                <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+                  <path
+                    d="M2.6 4.4h8.8M5.4 4.4V3.2h3.2v1.2M4 4.4l.6 6.6h4.8L10 4.4"
+                    stroke="currentColor"
+                    stroke-width="1.3"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </button>
+            </span>
           </div>
-        </template>
+        </div>
       </section>
 
       <!-- État vide -->
-      <div v-if="sortedItems.length === 0 && !hostsLoading" class="empty">
+      <div v-if="showEmpty" class="empty">
         <svg width="34" height="34" viewBox="0 0 18 18" fill="none">
           <rect
             x="2.5"
@@ -527,7 +832,8 @@ function addressOf(item: ServerItem): string {
             stroke-width="1.2"
           />
         </svg>
-        <p v-if="search">Aucun résultat pour « {{ search }} ».</p>
+        <p v-if="searching">Aucun résultat pour « {{ search }} ».</p>
+        <p v-else-if="cwd">Ce dossier est vide.</p>
         <p v-else>Aucun serveur. Clique sur « Nouveau serveur » pour commencer.</p>
       </div>
     </div>
@@ -535,11 +841,20 @@ function addressOf(item: ServerItem): string {
     <ServerFormDialog
       :open="dialogOpen"
       :item="editingItem"
-      :groups="groupNames"
+      :groups="folders"
       :default-group="dialogGroup"
       :default-source="dialogSource"
       @save="onSave"
       @close="dialogOpen = false"
+    />
+
+    <GroupDialog
+      :open="folderDialog.open"
+      :mode="folderDialog.mode"
+      :path="folderDialog.path"
+      :error="groupsError"
+      @submit="onFolderSubmit"
+      @close="folderDialog.open = false"
     />
   </section>
 </template>
@@ -711,25 +1026,284 @@ function addressOf(item: ServerItem): string {
   gap: 20px;
 }
 
+/* ---------- Fil d'Ariane ---------- */
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+}
+
+.crumbs__item {
+  border: 0;
+  border-radius: 7px;
+  padding: 3px 7px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--g-t3);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.crumbs__item:hover:not(.crumbs__item--current) {
+  background: var(--g-s2);
+  color: var(--g-t1);
+}
+
+/* Cible de dépôt survolée pendant un glissement. */
+.crumbs__item--over {
+  background: var(--g-accent-soft);
+  color: var(--g-accent);
+  box-shadow: inset 0 0 0 1px var(--g-accent-ring);
+}
+
+.crumbs__item--current {
+  color: var(--g-t1);
+  font-weight: 600;
+  cursor: default;
+}
+
+.crumbs__sep {
+  color: var(--g-t3);
+  flex-shrink: 0;
+}
+
+.crumbs__line {
+  flex: 1;
+  height: 1px;
+  background: var(--g-border);
+  margin: 0 6px;
+}
+
+.crumbs__act {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--g-border);
+  border-radius: 8px;
+  background: var(--g-s1);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--g-t2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.crumbs__act:hover {
+  background: var(--g-s2);
+  color: var(--g-t1);
+}
+
+.crumbs__act--new:hover {
+  color: var(--g-accent);
+  border-color: var(--g-accent-ring);
+}
+
+.crumbs__act--danger:hover {
+  background: var(--g-danger-soft);
+  border-color: var(--g-danger);
+  color: var(--g-danger);
+}
+
+/* ---------- Dossiers ---------- */
+/*
+ * Un dossier se présente comme un serveur : tuile en vue grille, ligne en vue
+ * liste. Même balisage, deux habillages — les colonnes de `.folder--row` sont
+ * calées sur celles de `.row` pour que dossiers et serveurs s'alignent.
+ */
+.folder {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  background: var(--g-s1);
+  border: 1px solid var(--g-border);
+  cursor: pointer;
+  outline: none;
+}
+
+.folder__ava {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--g-s2);
+  border: 1px solid var(--g-border);
+  color: var(--g-accent);
+  flex-shrink: 0;
+}
+
+.folder__body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.folder__name {
+  font-weight: 600;
+  color: var(--g-t1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder__count {
+  color: var(--g-t3);
+  white-space: nowrap;
+}
+
+.folder__actions {
+  display: flex;
+  gap: 5px;
+  opacity: 0;
+  transition: opacity 0.12s ease-out;
+}
+
+.folder:hover .folder__actions,
+.folder:focus-within .folder__actions {
+  opacity: 1;
+}
+
+.folder__act {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--g-border);
+  border-radius: 8px;
+  background: var(--g-s0);
+  color: var(--g-t2);
+  cursor: pointer;
+}
+
+.folder__act:hover {
+  color: var(--g-t1);
+}
+
+.folder__act--danger:hover {
+  background: var(--g-danger-soft);
+  border-color: var(--g-danger);
+  color: var(--g-danger);
+}
+
+/*
+ * Dossier survolé pendant un glissement. Le liseré plein remplace l'anneau
+ * translucide du survol ordinaire : « on peut lâcher ici » doit se distinguer
+ * de « la souris passe par là ».
+ */
+.folder--over {
+  background: var(--g-accent-soft);
+  border-color: var(--g-accent);
+}
+
+.folder--over .folder__ava {
+  border-color: var(--g-accent-ring);
+}
+
+/* Tuile : même gabarit que ServerCard (66 px, ombre, léger soulèvement). */
+.folder--tile {
+  padding: 13px;
+  border-radius: 12px;
+  box-shadow: var(--g-sh1);
+  transition:
+    transform 0.14s cubic-bezier(0.2, 0.8, 0.3, 1),
+    box-shadow 0.14s ease,
+    background 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.folder--tile:hover,
+.folder--tile:focus-visible {
+  background: var(--g-s2);
+  border-color: var(--g-accent-ring);
+  transform: translateY(-1px);
+  box-shadow: var(--g-sh2);
+}
+
+.folder--tile .folder__ava {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+
+.folder--tile .folder__ava svg {
+  width: 18px;
+  height: 18px;
+}
+
+.folder--tile .folder__body {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.folder--tile .folder__name {
+  font-size: 13.5px;
+}
+
+.folder--tile .folder__count {
+  font-size: 11.5px;
+}
+
+/* Ligne : même gabarit que `.row`, colonnes comprises. */
+.folder--row {
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.folder--row:hover,
+.folder--row:focus-visible {
+  background: var(--g-s2);
+  border-color: var(--g-accent-ring);
+}
+
+.folder--row .folder__ava {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+}
+
+.folder--row .folder__ava svg {
+  width: 13px;
+  height: 13px;
+}
+
+.folder--row .folder__body {
+  flex-direction: row;
+  align-items: center;
+  gap: 11px;
+}
+
+.folder--row .folder__name {
+  /* Même largeur que `.row__name` : les noms se lisent sur une seule colonne. */
+  width: 200px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.folder--row .folder__count {
+  flex: 1;
+  font-size: 11.5px;
+}
+
 .group__head {
   display: flex;
   align-items: center;
   gap: 9px;
   margin-bottom: 11px;
-}
-
-.group__chevron {
-  display: flex;
-  border: 0;
-  background: transparent;
-  color: var(--g-t3);
-  cursor: pointer;
-  padding: 2px;
-  transition: transform 0.14s cubic-bezier(0.2, 0.8, 0.3, 1);
-}
-
-.group__chevron--closed {
-  transform: rotate(-90deg);
 }
 
 .group__name {
@@ -753,6 +1327,23 @@ function addressOf(item: ServerItem): string {
   flex: 1;
   height: 1px;
   background: var(--g-border);
+}
+
+.group__open {
+  border: 0;
+  border-radius: 7px;
+  padding: 3px 8px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--g-t3);
+  cursor: pointer;
+}
+
+.group__open:hover {
+  background: var(--g-s2);
+  color: var(--g-accent);
 }
 
 /* Grille responsive : 3 col ≥1140, 2 col ≥960, 1 col en dessous. */
@@ -814,6 +1405,7 @@ function addressOf(item: ServerItem): string {
   border: 1px solid var(--g-border);
   border-radius: 10px;
   background: var(--g-s1);
+  cursor: grab;
   transition:
     background 0.12s ease,
     border-color 0.12s ease;
@@ -822,6 +1414,11 @@ function addressOf(item: ServerItem): string {
 .row:hover {
   background: var(--g-s2);
   border-color: var(--g-accent-ring);
+}
+
+/* Le serveur se saisit à la souris. */
+.row:active {
+  cursor: grabbing;
 }
 
 .row__ava {
