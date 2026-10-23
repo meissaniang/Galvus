@@ -17,7 +17,7 @@ jobs:
     outputs:
       release_id: ${{ steps.create.outputs.result }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Extraire les notes de version
         run: |
@@ -125,7 +125,7 @@ jobs:
             suffix: windows
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # La version de pnpm est lue depuis le champ packageManager du package.json.
       - uses: pnpm/action-setup@v4
@@ -224,7 +224,7 @@ jobs:
     needs: publish
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
 
